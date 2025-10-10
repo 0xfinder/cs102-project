@@ -26,6 +26,8 @@ dependencies {
     implementation(libs.guava)
 
     implementation("org.opencv:opencv:4.8.0")
+    // sqlite jdbc driver
+    implementation("org.xerial:sqlite-jdbc:3.50.3.0")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
