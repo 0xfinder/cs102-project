@@ -12,7 +12,7 @@
 
 ```bash
 # change /path/to/opencv-480.jar depending on where you installed
-mvn install:install-file -Dfile=/path/to/opencv-480.jar -DgroupId=org.opencv -DartifactId=opencv -Dversion=4.8.0 -Dpackaging=jar
+mvn install:install-file "-Dfile=/path/to/opencv-480.jar" "-DgroupId=org.opencv" "-DartifactId=opencv" "-Dversion=4.8.0" "-Dpackaging=jar"
 ```
 
 ## Running program
