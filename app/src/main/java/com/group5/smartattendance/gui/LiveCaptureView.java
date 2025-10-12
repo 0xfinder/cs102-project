@@ -3,7 +3,7 @@
 
 // Importing openCV modules
 //package com.opencvcamera;
-package gui;
+package com.group5.smartattendance.gui;
 
 // importing swing and awt classes
 import java.awt.Dimension;
@@ -18,6 +18,8 @@ import java.nio.file.Paths;
 import java.sql.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Objects;
+
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -34,13 +36,6 @@ import org.opencv.videoio.VideoCapture;
 
 // Class - Swing Class
 public class LiveCaptureView extends JFrame {
-    // Class for the face capture menu
-    static {
-        // Load OpenCV native library
-        System.load(
-                "C:\\Users\\limgo\\Desktop\\SMU_HW\\Y2S1\\CS102_Programming_Fundementals_II\\project\\opencvLibs\\opencv_java4120.dll");
-    }
-
     // Swing Elements
     private JLabel cameraScreen;
     private JButton btnCapture;
@@ -58,7 +53,9 @@ public class LiveCaptureView extends JFrame {
 
     // OpenCV Stuff
     private String saveFolder = "images";
-    private static String cascadePath = "haarcascade_frontalface_alt.xml";
+    private static String cascadePath = Objects
+            .requireNonNull(LiveRecognitionView.class.getClassLoader().getResource("haarcascade_frontalface_alt.xml"))
+            .getPath();
     private static CascadeClassifier faceDetector = new CascadeClassifier(cascadePath);
 
     public LiveCaptureView() {
@@ -205,19 +202,20 @@ public class LiveCaptureView extends JFrame {
         }
 
         // Create folder if folder doesn't exist
+        Path studentFolder = Paths.get(saveFolder, name);
         try {
-            Files.createDirectories(Paths.get(saveFolder + "\\" + name));
+            Files.createDirectories(studentFolder);
         } catch (Exception e) {
             System.out.println(e);
         }
 
         // Get No. images in folder already
         // e.g. If 0 files, next file will be index 0
-        int imageIndex = new File(saveFolder + "\\" + name).list().length;
+        int imageIndex = studentFolder.toFile().list().length;
 
         // Write to file
-        Imgcodecs.imwrite(
-                String.format("%s\\%s\\%s_%02d.jpg", saveFolder, name, name, imageIndex),
+        Path output = studentFolder.resolve(String.format("%s_%02d.jpg", name, imageIndex));
+        Imgcodecs.imwrite(output.toString(),
                 imageToSave);
     }
 

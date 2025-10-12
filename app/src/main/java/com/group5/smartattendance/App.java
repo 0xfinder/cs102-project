@@ -3,16 +3,17 @@
  */
 package com.group5.smartattendance;
 
+import com.group5.smartattendance.gui.MainMenuView;
+import com.group5.smartattendance.persistence.DatabaseManager;
 import org.opencv.core.Core;
 
+import javax.swing.SwingUtilities;
+
 public class App {
-    public String getGreeting() {
-        return "Hello World!";
-    }
 
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+        DatabaseManager.initialize();
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        System.out.println("OpenCV version: " + Core.VERSION);
+        SwingUtilities.invokeLater(MainMenuView::new);
     }
 }

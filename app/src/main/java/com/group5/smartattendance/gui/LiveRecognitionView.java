@@ -3,7 +3,7 @@
 
 // Importing openCV modules
 //package com.opencvcamera;
-package gui;
+package com.group5.smartattendance.gui;
 
 // importing swing and awt classes
 import java.awt.Dimension;
@@ -21,6 +21,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -36,17 +37,11 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.videoio.VideoCapture;
 
-import student.*;
+import java.util.Objects;
+import com.group5.smartattendance.student.FaceData;;
 
 // Class - Swing Class
 public class LiveRecognitionView extends JFrame {
-    // Class for the face regocnition menu
-    static {
-        // Load OpenCV native library
-        System.load(
-                "C:\\Users\\limgo\\Desktop\\SMU_HW\\Y2S1\\CS102_Programming_Fundementals_II\\project\\opencvLibs\\opencv_java4120.dll");
-    }
-
     // Swing Elements
     private JLabel cameraScreen;
     private JButton btnMarkAttendance;
@@ -64,7 +59,9 @@ public class LiveRecognitionView extends JFrame {
 
     // OpenCV Stuff
     private String saveFolder = "images";
-    private static String cascadePath = "haarcascade_frontalface_alt.xml";
+    private static String cascadePath = Objects
+            .requireNonNull(LiveRecognitionView.class.getClassLoader().getResource("haarcascade_frontalface_alt.xml"))
+            .getPath();
     private static CascadeClassifier faceDetector = new CascadeClassifier(cascadePath);
 
     public LiveRecognitionView() {
@@ -242,10 +239,17 @@ public class LiveRecognitionView extends JFrame {
     private List<FaceData> getFaceData() {
         List<FaceData> studentFaceData = new ArrayList<>();
 
-        String[] studentsNames = new File(saveFolder).list();
-        for (String name : studentsNames) {
-            if (!name.equals("unnamed")) {
-                studentFaceData.add(createFaceData(name));
+        File folder = new File(saveFolder);
+        if (!folder.exists() || !folder.isDirectory()) {
+            return studentFaceData;
+        }
+
+        String[] studentsNames = folder.list();
+        if (studentsNames != null) {
+            for (String name : studentsNames) {
+                if (!name.equals("unnamed")) {
+                    studentFaceData.add(createFaceData(name));
+                }
             }
         }
 
@@ -253,7 +257,9 @@ public class LiveRecognitionView extends JFrame {
     }
 
     private FaceData createFaceData(String studentName) {
-        FaceData fd = new FaceData(saveFolder + "\\" + studentName);
+        // use paths for cross platform support
+        Path studentFolder = Paths.get(saveFolder, studentName);
+        FaceData fd = new FaceData(studentFolder.toString());
         fd.setStudentName(studentName);
         return fd;
     }
