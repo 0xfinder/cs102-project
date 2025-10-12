@@ -1,3 +1,4 @@
+// Code by Gordon
 // Java Program to take a Snapshot from System Camera
 // using OpenCV
 
@@ -38,6 +39,7 @@ import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.videoio.VideoCapture;
 
 import java.util.Objects;
+import com.group5.smartattendance.gui.*;
 import com.group5.smartattendance.student.FaceData;;
 
 // Class - Swing Class
@@ -59,9 +61,11 @@ public class LiveRecognitionView extends JFrame {
 
     // OpenCV Stuff
     private String saveFolder = "images";
-    private static String cascadePath = Objects
-            .requireNonNull(LiveRecognitionView.class.getClassLoader().getResource("haarcascade_frontalface_alt.xml"))
-            .getPath();
+    // private static String cascadePath = Objects
+    // .requireNonNull(LiveRecognitionView.class.getClassLoader()
+    // .getResource("src\\main\\resources\\haarcascade_frontalface_alt.xml"))
+    // .getPath();
+    private static String cascadePath = "src\\main\\resources\\haarcascade_frontalface_alt.xml";
     private static CascadeClassifier faceDetector = new CascadeClassifier(cascadePath);
 
     public LiveRecognitionView() {
@@ -282,6 +286,7 @@ public class LiveRecognitionView extends JFrame {
         return highestScoreName;
     }
 
+    // To Update
     private void markAttendance() {
         if (detectedName.equals("No Student Detected!")) {
             System.out.println("No Face Detected!");

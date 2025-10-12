@@ -1,3 +1,4 @@
+// Code by Gordon
 package com.group5.smartattendance.gui;
 
 import java.awt.Dimension;
@@ -10,6 +11,8 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+
+import com.group5.smartattendance.gui.*;
 
 public class MainMenuView extends JFrame {
     // Class for the main menu
