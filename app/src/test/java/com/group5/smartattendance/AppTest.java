@@ -5,12 +5,14 @@ package com.group5.smartattendance;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.lang.reflect.Method;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class AppTest {
     @Test
-    void appHasAGreeting() {
-        App classUnderTest = new App();
-        assertNotNull(classUnderTest.getGreeting(), "app should have a greeting");
+    void appExposesMainEntryPoint() throws NoSuchMethodException {
+        Method main = App.class.getDeclaredMethod("main", String[].class);
+        assertNotNull(main, "App should declare a main entry point");
     }
 }
