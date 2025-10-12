@@ -1,4 +1,4 @@
-package util;
+package com.group5.smartattendance.student;
 
 import java.util.List;
 import java.io.File;
