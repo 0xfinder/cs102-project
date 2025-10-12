@@ -61,11 +61,10 @@ public class LiveRecognitionView extends JFrame {
 
     // OpenCV Stuff
     private String saveFolder = "images";
-    // private static String cascadePath = Objects
-    // .requireNonNull(LiveRecognitionView.class.getClassLoader()
-    // .getResource("src\\main\\resources\\haarcascade_frontalface_alt.xml"))
-    // .getPath();
-    private static String cascadePath = "src\\main\\resources\\haarcascade_frontalface_alt.xml";
+    private static String cascadePath = Objects
+            .requireNonNull(LiveRecognitionView.class.getClassLoader()
+                    .getResource("haarcascade_frontalface_alt.xml"))
+            .getPath();
     private static CascadeClassifier faceDetector = new CascadeClassifier(cascadePath);
 
     public LiveRecognitionView() {
