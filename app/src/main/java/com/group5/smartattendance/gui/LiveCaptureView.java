@@ -35,7 +35,7 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.videoio.VideoCapture;
 
-import com.group5.smartattendance.gui.*;
+import com.group5.smartattendance.core.CascadeLoader;
 
 // Class - Swing Class
 public class LiveCaptureView extends JFrame {
@@ -56,19 +56,9 @@ public class LiveCaptureView extends JFrame {
 
     // OpenCV Stuff
     private String saveFolder = "images";
-    private static String cascadePath = Objects
-            .requireNonNull(LiveCaptureView.class.getClassLoader()
-                    .getResource("haarcascade_frontalface_alt.xml"))
-            .getPath();
-    private static CascadeClassifier faceDetector = new CascadeClassifier(cascadePath);
+    private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
 
     public LiveCaptureView() {
-        // Load face detector
-        if (faceDetector.empty()) {
-            System.out.println("Error loading cascade file: " + cascadePath);
-            return;
-        }
-
         // Designing UI
         setLayout(null);
 
