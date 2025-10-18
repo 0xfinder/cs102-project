@@ -1,10 +1,15 @@
 // Myat
 package com.group5.smartattendance.gui;
 
+import com.group5.smartattendance.persistence.StudentManager;
+import com.group5.smartattendance.student.Student;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.SQLException;
+import java.util.List;
 
 public class StudentView extends JFrame {
 
@@ -35,8 +40,8 @@ public class StudentView extends JFrame {
         btnBack.setBounds((window_w - 100) / 2, 310, 100, 30);
         add(btnBack);
 
-        // Sample data — you can connect this with StudentManager later
-        studentTextArea.setText("ID: S001 - Alice Tan\nID: S002 - Bob Lee\n...");
+        // Load real student data
+        loadStudentData();
 
         btnBack.addActionListener(new ActionListener() {
             @Override
@@ -49,6 +54,27 @@ public class StudentView extends JFrame {
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setVisible(true);
+    }
+
+    private void loadStudentData() {
+        try {
+            List<Student> students = StudentManager.findAll();
+            StringBuilder sb = new StringBuilder();
+            if (students.isEmpty()) {
+                sb.append("No students registered yet.");
+            } else {
+                for (Student student : students) {
+                    sb.append("ID: ").append(student.getId()).append(" - ").append(student.getName());
+                    if (student.getClassGroup() != null) {
+                        sb.append(" (Class: ").append(student.getClassGroup()).append(")").append("\n");
+                    }
+                }
+            }
+            studentTextArea.setText(sb.toString());
+        } catch (SQLException e) {
+            studentTextArea.setText("Error loading student data: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
 
