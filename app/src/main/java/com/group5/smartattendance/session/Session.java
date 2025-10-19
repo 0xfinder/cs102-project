@@ -20,6 +20,35 @@ public class Session extends Entity {
     private final LocalTime endTime;
     private String location; // optional
     private Status status;
+    private final Roster roster;
+
+    public Session(
+            String id,
+            String courseName,
+            LocalDate sessionDate,
+            LocalTime startTime,
+            LocalTime endTime,
+            String location,
+            Status status,
+            Roster roster) {
+        super(id);
+        this.courseName = Objects.requireNonNull(courseName, "courseName must not be null");
+        this.sessionDate = Objects.requireNonNull(sessionDate, "sessionDate must not be null");
+        this.startTime = Objects.requireNonNull(startTime, "startTime must not be null");
+        this.endTime = Objects.requireNonNull(endTime, "endTime must not be null");
+        this.location = location;
+        this.status = status == null ? Status.OPEN : status;
+        this.roster = roster == null ? new Roster() : roster;
+    }
+
+    public Session(
+            String id,
+            String courseName,
+            LocalDate sessionDate,
+            LocalTime startTime,
+            LocalTime endTime) {
+        this(id, courseName, sessionDate, startTime, endTime, null, Status.OPEN, new Roster());
+    }
 
     public Session(
             String id,
@@ -29,22 +58,7 @@ public class Session extends Entity {
             LocalTime endTime,
             String location,
             Status status) {
-        super(id);
-        this.courseName = Objects.requireNonNull(courseName, "courseName must not be null");
-        this.sessionDate = Objects.requireNonNull(sessionDate, "sessionDate must not be null");
-        this.startTime = Objects.requireNonNull(startTime, "startTime must not be null");
-        this.endTime = Objects.requireNonNull(endTime, "endTime must not be null");
-        this.location = location;
-        this.status = status == null ? Status.OPEN : status;
-    }
-
-    public Session(
-            String id,
-            String courseName,
-            LocalDate sessionDate,
-            LocalTime startTime,
-            LocalTime endTime) {
-        this(id, courseName, sessionDate, startTime, endTime, null, Status.OPEN);
+        this(id, courseName, sessionDate, startTime, endTime, location, status, new Roster());
     }
 
     public String getCourseName() {
@@ -71,6 +85,10 @@ public class Session extends Entity {
         return status;
     }
 
+    public Roster getRoster() {
+        return roster;
+    }
+
     public void updateLocation(String location) {
         this.location = location;
     }
@@ -85,5 +103,17 @@ public class Session extends Entity {
 
     public void close() {
         this.status = Status.CLOSED;
+    }
+
+    public Session copyWithRoster(Roster roster) {
+        return new Session(
+                getId(),
+                courseName,
+                sessionDate,
+                startTime,
+                endTime,
+                location,
+                status,
+                roster);
     }
 }
