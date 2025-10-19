@@ -106,31 +106,47 @@ public class MainMenuView extends JFrame {
             }
         });
 
+        // btn00.addActionListener(new ActionListener() {
+        // @Override
+        // public void actionPerformed(ActionEvent e) {
+        // System.out.println("StudentView");
+        // }
+        // });
+        // Myat I replaced btn00
         btn00.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("StudentView");
+                new StudentView(); // opens your class!
             }
         });
 
         btn01.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("SessionView");
+                new SessionView();
             }
         });
 
         btn02.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("ReportView");
+                // Open the ReportView window
+                new ReportView();
             }
         });
 
+        // btn03.addActionListener(new ActionListener() {
+        // @Override
+        // public void actionPerformed(ActionEvent e) {
+        // System.out.println("SettingView");
+        // }
+        // });
+        // Myat I changed btn03 too
         btn03.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("SettingView");
+                new SettingView(); // open the settings window
             }
         });
 

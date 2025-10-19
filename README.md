@@ -2,8 +2,8 @@
 
 ## Requirements
 
-- gradle 9.0.0
-- maven 3.9.11
+- [gradle 9.0.0](https://gradle.org/install/)
+- [maven 3.9.11](https://maven.apache.org/install.html)
 - jdk 21
 
 ## Setup
