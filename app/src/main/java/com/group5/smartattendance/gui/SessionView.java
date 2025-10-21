@@ -4,17 +4,28 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.group5.smartattendance.session.Roster;
+import com.group5.smartattendance.session.Session;
+import com.group5.smartattendance.session.SessionManager;
+import com.group5.smartattendance.student.Student;
 
 public class SessionView extends JFrame {
 
     private JTable sessionTable;
     private DefaultTableModel sessionModel;
     private JButton btnEdit, btnNewSession, btnDelete;
-    private List<SessionData> sessions = new ArrayList<>();
+    private SessionManager sessionManager;
+    private List<Session> sessions = new ArrayList<>();
 
     public SessionView() {
+        // initialize session manager
+        sessionManager = new SessionManager();
+
         setTitle("All Sessions");
         setLayout(null);
         setSize(800, 500);
@@ -27,7 +38,7 @@ public class SessionView extends JFrame {
         add(lblHeader);
 
         // Table setup
-        String[] columns = { "Course", "Date", "Start Time", "End Time", "Status" };
+        String[] columns = { "Course", "Date", "Start Time", "End Time", "Location", "Status" };
         sessionModel = new DefaultTableModel(null, columns) {
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -38,8 +49,8 @@ public class SessionView extends JFrame {
         scrollPane.setBounds(50, 70, 700, 250);
         add(scrollPane);
 
-        // Load dummy data
-        loadDummySessions();
+        // Load sessions from persistence
+        loadSessions();
 
         // Edit button
         btnEdit = new JButton("Edit Session");
@@ -62,20 +73,17 @@ public class SessionView extends JFrame {
         setVisible(true);
     }
 
-    private void loadDummySessions() {
-        sessions.clear();
-
-        sessions.add(new SessionData("CS102", LocalDate.now().toString(), "10:00", "11:00", true));
-        sessions.add(new SessionData("CS203", LocalDate.now().minusDays(1).toString(), "09:00", "10:00", false));
-
+    private void loadSessions() {
+        sessions = sessionManager.listSessions();
         sessionModel.setRowCount(0);
-        for (SessionData session : sessions) {
+        for (Session session : sessions) {
             sessionModel.addRow(new Object[] {
-                    session.courseName,
-                    session.date,
-                    session.startTime,
-                    session.endTime,
-                    session.isOpen ? "Open" : "Closed"
+                    session.getCourseName(),
+                    session.getSessionDate().toString(),
+                    session.getStartTime().toString(),
+                    session.getEndTime().toString(),
+                    session.getLocation().orElse(""),
+                    session.getStatus().name()
             });
         }
     }
@@ -87,32 +95,166 @@ public class SessionView extends JFrame {
             return;
         }
 
-        SessionData session = sessions.get(selected);
+        Session session = sessions.get(selected);
 
-        // Hardcoded roster data for demo
-        List<Object[]> roster = new ArrayList<>();
-        roster.add(new Object[] { "S001", "Alice Tan", "Present", "10:01:34", "Auto" });
-        roster.add(new Object[] { "S002", "Bob Lee", "Late", "10:16:50", "Auto" });
-        roster.add(new Object[] { "S003", "Charlie Lin", "Absent", "-", "-" });
-        roster.add(new Object[] { "S004", "Jane Doe", "Present", "10:00:15", "Auto" });
+        List<Object[]> rosterRows;
+        try {
+            Roster roster = sessionManager.loadRoster(session.getId());
+            rosterRows = toRosterRows(roster);
+        } catch (SessionManager.SessionManagerException ex) {
+            JOptionPane.showMessageDialog(this, "Failed to load roster: " + ex.getMessage(),
+                    "Session Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-        new SessionDetailDialog(this, session.courseName, roster);
+        new SessionDetailDialog(this, session, rosterRows);
     }
 
     private void createNewSession() {
-        String course = JOptionPane.showInputDialog(this, "Enter course name:");
-        if (course == null || course.trim().isEmpty())
-            return;
+        // create inputs for course name, session date, start time, end time, location
+        JTextField courseNameField = new JTextField(20);
+        JTextField sessionDateField = new JTextField(20);
+        JTextField startTimeField = new JTextField(20);
+        JTextField endTimeField = new JTextField(20);
+        JTextField locationField = new JTextField(20);
 
-        SessionData newSession = new SessionData(course, LocalDate.now().toString(), "10:00", "11:00", true);
-        sessions.add(newSession);
-        sessionModel.addRow(new Object[] {
-                newSession.courseName,
-                newSession.date,
-                newSession.startTime,
-                newSession.endTime,
-                "Open"
-        });
+        // add placeholder text to fields to show example format of inputs
+        // TODO: make placeholder text greyed out
+        courseNameField.setText("Enter course name");
+        sessionDateField.setText("Enter session date (YYYY-MM-DD)");
+        startTimeField.setText("Enter start time (HH:MM)");
+        endTimeField.setText("Enter end time (HH:MM)");
+        locationField.setText("Enter location (optional)");
+
+        // create a panel with the input fields
+        JPanel panel = new JPanel(new GridLayout(5, 2));
+        panel.add(new JLabel("Course Name:"));
+        panel.add(courseNameField);
+        panel.add(new JLabel("Session Date:"));
+        panel.add(sessionDateField);
+        panel.add(new JLabel("Start Time:"));
+        panel.add(startTimeField);
+        panel.add(new JLabel("End Time:"));
+        panel.add(endTimeField);
+        panel.add(new JLabel("Location:"));
+        panel.add(locationField);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "Create New Session",
+                JOptionPane.OK_CANCEL_OPTION);
+
+        if (result == JOptionPane.OK_OPTION) {
+            String courseName = courseNameField.getText();
+            String sessionDate = sessionDateField.getText();
+            String startTime = startTimeField.getText();
+            String endTime = endTimeField.getText();
+            String location = locationField.getText();
+
+            // show a dialog until all required fields are valid; preserve entered values
+            LocalDate parsedSessionDate = null;
+            LocalTime parsedStartTime = null;
+            LocalTime parsedEndTime = null;
+            boolean valid = false;
+            while (!valid) {
+                valid = true;
+                StringBuilder errorMsg = new StringBuilder();
+                parsedSessionDate = null;
+                parsedStartTime = null;
+                parsedEndTime = null;
+
+                // validate fields
+                if (courseName == null || courseName.trim().isEmpty()) {
+                    errorMsg.append("Course name is required.\n");
+                    valid = false;
+                } else {
+                    courseName = courseName.trim();
+                }
+                if (sessionDate == null || sessionDate.trim().isEmpty()) {
+                    // auto set to today's date
+                    sessionDate = LocalDate.now().toString();
+                    sessionDateField.setText(sessionDate);
+                    parsedSessionDate = LocalDate.parse(sessionDate);
+                } else {
+                    sessionDate = sessionDate.trim();
+                    try {
+                        parsedSessionDate = LocalDate.parse(sessionDate);
+                    } catch (DateTimeParseException ex) {
+                        errorMsg.append("Session date must be in ISO format (YYYY-MM-DD).\n");
+                        valid = false;
+                    }
+                }
+                if (startTime == null || startTime.trim().isEmpty()) {
+                    errorMsg.append("Start time is required.\n");
+                    valid = false;
+                } else {
+                    startTime = startTime.trim();
+                    try {
+                        parsedStartTime = LocalTime.parse(startTime);
+                    } catch (DateTimeParseException ex) {
+                        errorMsg.append("Start time must be in 24-hour format (HH:MM).\n");
+                        valid = false;
+                    }
+                }
+                if (endTime == null || endTime.trim().isEmpty()) {
+                    errorMsg.append("End time is required.");
+                    valid = false;
+                } else {
+                    endTime = endTime.trim();
+                    try {
+                        parsedEndTime = LocalTime.parse(endTime);
+                    } catch (DateTimeParseException ex) {
+                        errorMsg.append("End time must be in 24-hour format (HH:MM).");
+                        valid = false;
+                    }
+                }
+                // TODO: validate that start time is before end time
+
+                if (!valid) {
+                    JOptionPane.showMessageDialog(this, errorMsg.toString().trim(), "Validation Error",
+                            JOptionPane.ERROR_MESSAGE);
+
+                    // pop up the input dialog again, with current values retained
+                    courseNameField.setText(courseName != null ? courseName : "");
+                    sessionDateField.setText(sessionDate != null ? sessionDate : "");
+                    startTimeField.setText(startTime != null ? startTime : "");
+                    endTimeField.setText(endTime != null ? endTime : "");
+                    locationField.setText(location != null ? location : "");
+
+                    JPanel retryPanel = new JPanel(new GridLayout(5, 2));
+                    retryPanel.add(new JLabel("Course Name:"));
+                    retryPanel.add(courseNameField);
+                    retryPanel.add(new JLabel("Session Date:"));
+                    retryPanel.add(sessionDateField);
+                    retryPanel.add(new JLabel("Start Time:"));
+                    retryPanel.add(startTimeField);
+                    retryPanel.add(new JLabel("End Time:"));
+                    retryPanel.add(endTimeField);
+                    retryPanel.add(new JLabel("Location:"));
+                    retryPanel.add(locationField);
+
+                    int dialogResult = JOptionPane.showConfirmDialog(this, retryPanel, "Create New Session",
+                            JOptionPane.OK_CANCEL_OPTION);
+
+                    if (dialogResult != JOptionPane.OK_OPTION) {
+                        // user cancelled dialog, stop the loop/creation process
+                        return;
+                    }
+
+                    // re-fetch user input
+                    courseName = courseNameField.getText();
+                    sessionDate = sessionDateField.getText();
+                    startTime = startTimeField.getText();
+                    endTime = endTimeField.getText();
+                    location = locationField.getText();
+
+                }
+            }
+
+            location = (location != null && !location.trim().isEmpty()) ? location.trim() : "";
+            sessionManager.createSession(courseName, parsedSessionDate, parsedStartTime,
+                    parsedEndTime, location, new Roster());
+            loadSessions();
+            JOptionPane.showMessageDialog(this, "Session created successfully.");
+        }
     }
 
     private void deleteSelectedSession() {
@@ -122,28 +264,36 @@ public class SessionView extends JFrame {
             return;
         }
 
-        SessionData session = sessions.get(selected);
-        if (session.isOpen) {
+        Session session = sessions.get(selected);
+        if (session.getStatus() == Session.Status.OPEN) {
             JOptionPane.showMessageDialog(this, "Cannot delete an active (open) session.");
             return;
         }
 
-        sessions.remove(selected);
-        sessionModel.removeRow(selected);
+        try {
+            sessionManager.deleteSession(session.getId());
+            loadSessions();
+            JOptionPane.showMessageDialog(this, "Session deleted successfully.");
+        } catch (SessionManager.SessionManagerException ex) {
+            JOptionPane.showMessageDialog(this, "Failed to delete session: " + ex.getMessage(),
+                    "Session Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
-    // Inner class to simulate session data
-    private static class SessionData {
-        String courseName, date, startTime, endTime;
-        boolean isOpen;
-
-        public SessionData(String courseName, String date, String startTime, String endTime, boolean isOpen) {
-            this.courseName = courseName;
-            this.date = date;
-            this.startTime = startTime;
-            this.endTime = endTime;
-            this.isOpen = isOpen;
+    private List<Object[]> toRosterRows(Roster roster) {
+        List<Object[]> rows = new ArrayList<>();
+        if (roster == null) {
+            return rows;
         }
+        for (Student student : roster.getStudents()) {
+            rows.add(new Object[] {
+                    student.getId(),
+                    student.getName(),
+                    "Pending",
+                    "-",
+                    "-" });
+        }
+        return rows;
     }
 
     // Inner dialog class for editing a single session's attendance roster
@@ -154,14 +304,16 @@ public class SessionView extends JFrame {
         private JButton btnSaveChanges, btnCloseSession;
         private final List<String> lateAlerts = new ArrayList<>();
 
-        public SessionDetailDialog(JFrame parent, String courseName, List<Object[]> rosterData) {
-            super(parent, "Session Detail - " + courseName, true);
+        public SessionDetailDialog(JFrame parent, Session session, List<Object[]> rosterData) {
+            super(parent, "Session Detail - " + session.getCourseName(), true);
             setLayout(null);
 
             final int window_w = 700;
             final int window_h = 500;
 
-            lblHeader = new JLabel("Session: " + courseName + " - " + LocalDate.now(), SwingConstants.CENTER);
+            lblHeader = new JLabel(
+                    "Session: " + session.getCourseName() + " - " + session.getSessionDate(),
+                    SwingConstants.CENTER);
             lblHeader.setFont(new Font("Dialog", Font.BOLD, 18));
             lblHeader.setBounds(0, 10, window_w, 25);
             add(lblHeader);
