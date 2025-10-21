@@ -17,9 +17,12 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public class SessionManager {
 
@@ -61,6 +64,17 @@ public class SessionManager {
             INNER JOIN students s ON ar.student_id = s.id
             WHERE ar.session_id = ?
             ORDER BY s.name COLLATE NOCASE
+            """;
+
+    private static final String SELECT_ROSTER_IDS_SQL = """
+            SELECT student_id
+            FROM attendance_records
+            WHERE session_id = ?
+            """;
+
+    private static final String DELETE_ROSTER_ENTRY_SQL = """
+            DELETE FROM attendance_records
+            WHERE session_id = ? AND student_id = ?
             """;
 
     private final ConnectionProvider connectionProvider;
@@ -131,7 +145,7 @@ public class SessionManager {
     }
 
     public Optional<Session> getSession(String sessionId) {
-        long id = parseSessionId(sessionId);
+        long id = Long.parseLong(sessionId);
         try (Connection connection = connectionProvider.getConnection();
                 PreparedStatement statement = connection.prepareStatement(SELECT_SESSION_BY_ID_SQL)) {
             statement.setLong(1, id);
@@ -150,19 +164,61 @@ public class SessionManager {
     public Session updateSession(Session session) {
         Objects.requireNonNull(session, "session must not be null");
         Objects.requireNonNull(session.getId(), "session id must not be null");
+        long id = Long.parseLong(session.getId());
 
-        try (Connection connection = connectionProvider.getConnection();
-                PreparedStatement statement = connection.prepareStatement(UPDATE_SESSION_SQL)) {
-            SessionMapper.bindUpdate(statement, session);
-            int updatedRows = statement.executeUpdate();
-            if (updatedRows == 0) {
-                throw new SessionManagerException("Session " + session.getId() + " not found");
+        try (Connection connection = connectionProvider.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement statement = connection.prepareStatement(UPDATE_SESSION_SQL)) {
+                SessionMapper.bindUpdate(statement, session);
+                int updatedRows = statement.executeUpdate();
+                if (updatedRows == 0) {
+                    throw new SessionManagerException("Session " + session.getId() + " not found");
+                }
+                syncRoster(connection, id, session.getRoster());
+                Session updated = findSession(connection, id)
+                        .orElseThrow(() -> new SessionManagerException(
+                                "Session " + session.getId() + " not found after update"));
+                connection.commit();
+                return updated;
+            } catch (SQLException | RuntimeException ex) {
+                connection.rollback();
+                throw ex;
+            } finally {
+                connection.setAutoCommit(true);
             }
-            return getSession(session.getId())
-                    .orElseThrow(() -> new SessionManagerException(
-                            "Session " + session.getId() + " not found after update"));
         } catch (SQLException ex) {
             throw new SessionManagerException("Failed to update session " + session.getId(), ex);
+        }
+    }
+
+    public Session updateRoster(String sessionId, Collection<Student> students) {
+        Objects.requireNonNull(sessionId, "sessionId must not be null");
+        long id = Long.parseLong(sessionId);
+        Roster desiredRoster;
+        try {
+            desiredRoster = students == null ? new Roster() : new Roster(students);
+        } catch (IllegalArgumentException ex) {
+            throw new SessionManagerException("Invalid roster students", ex);
+        }
+
+        try (Connection connection = connectionProvider.getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                Session session = findSession(connection, id)
+                        .orElseThrow(() -> new SessionManagerException("Session " + sessionId + " not found"));
+                syncRoster(connection, id, desiredRoster);
+                Roster updatedRoster = fetchRoster(connection, id);
+                Session updatedSession = session.copyWithRoster(updatedRoster);
+                connection.commit();
+                return updatedSession;
+            } catch (SQLException | RuntimeException ex) {
+                connection.rollback();
+                throw ex;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException ex) {
+            throw new SessionManagerException("Failed to update roster for session " + sessionId, ex);
         }
     }
 
@@ -175,7 +231,7 @@ public class SessionManager {
     }
 
     public void deleteSession(String sessionId) {
-        long id = parseSessionId(sessionId);
+        long id = Long.parseLong(sessionId);
         try (Connection connection = connectionProvider.getConnection()) {
             connection.setAutoCommit(false);
             try {
@@ -207,7 +263,7 @@ public class SessionManager {
     }
 
     public Roster loadRoster(String sessionId) {
-        long id = parseSessionId(sessionId);
+        long id = Long.parseLong(sessionId);
         try (Connection connection = connectionProvider.getConnection()) {
             return fetchRoster(connection, id);
         } catch (SQLException ex) {
@@ -216,7 +272,7 @@ public class SessionManager {
     }
 
     private Session setStatus(String sessionId, Session.Status status) {
-        long id = parseSessionId(sessionId);
+        long id = Long.parseLong(sessionId);
         try (Connection connection = connectionProvider.getConnection();
                 PreparedStatement statement = connection.prepareStatement(UPDATE_STATUS_SQL)) {
             statement.setString(1, status.name());
@@ -288,18 +344,70 @@ public class SessionManager {
         }
     }
 
-    private Optional<Session> findSession(Connection connection, long id) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement(SELECT_SESSION_BY_ID_SQL)) {
-                statement.setLong(1, id);
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    if (resultSet.next()) {
-                        Roster roster = fetchRoster(connection, id);
-                        return Optional.of(SessionMapper.map(resultSet, roster));
-                    }
-                    return Optional.empty();
+    private void syncRoster(Connection connection, long sessionId, Roster roster) throws SQLException {
+        Roster effectiveRoster = roster == null ? new Roster() : roster;
+
+        List<Student> desiredStudents = effectiveRoster.getStudents();
+        Set<String> desiredIds = new LinkedHashSet<>();
+        for (Student student : desiredStudents) {
+            String studentId = Objects.requireNonNull(student.getId(), "Roster student id must not be null");
+            desiredIds.add(studentId);
+        }
+
+        Set<String> existingIds = new LinkedHashSet<>();
+        try (PreparedStatement statement = connection.prepareStatement(SELECT_ROSTER_IDS_SQL)) {
+            statement.setLong(1, sessionId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    existingIds.add(resultSet.getString(1));
                 }
             }
         }
+
+        Set<String> toRemove = new LinkedHashSet<>(existingIds);
+        toRemove.removeAll(desiredIds);
+
+        Set<String> toAdd = new LinkedHashSet<>(desiredIds);
+        toAdd.removeAll(existingIds);
+
+        if (!toRemove.isEmpty()) {
+            try (PreparedStatement deleteStatement = connection.prepareStatement(DELETE_ROSTER_ENTRY_SQL)) {
+                for (String studentId : toRemove) {
+                    deleteStatement.setLong(1, sessionId);
+                    deleteStatement.setString(2, studentId);
+                    deleteStatement.addBatch();
+                }
+                deleteStatement.executeBatch();
+            }
+        }
+
+        if (!toAdd.isEmpty()) {
+            try (PreparedStatement insertStatement = connection.prepareStatement(INSERT_ATTENDANCE_SEED_SQL)) {
+                for (String studentId : toAdd) {
+                    insertStatement.setLong(1, sessionId);
+                    insertStatement.setString(2, studentId);
+                    insertStatement.setString(3, "PENDING");
+                    insertStatement.setNull(4, Types.VARCHAR);
+                    insertStatement.setNull(5, Types.VARCHAR);
+                    insertStatement.addBatch();
+                }
+                insertStatement.executeBatch();
+            }
+        }
+    }
+
+    private Optional<Session> findSession(Connection connection, long id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(SELECT_SESSION_BY_ID_SQL)) {
+            statement.setLong(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    Roster roster = fetchRoster(connection, id);
+                    return Optional.of(SessionMapper.map(resultSet, roster));
+                }
+                return Optional.empty();
+            }
+        }
+    }
 
     private Student mapStudent(ResultSet resultSet) throws SQLException {
         try {
@@ -331,15 +439,6 @@ public class SessionManager {
             } catch (DateTimeParseException ignored) {
                 throw primaryParseFailure;
             }
-        }
-    }
-
-    private long parseSessionId(String sessionId) {
-        Objects.requireNonNull(sessionId, "sessionId must not be null");
-        try {
-            return Long.parseLong(sessionId);
-        } catch (NumberFormatException ex) {
-            throw new SessionManagerException("Session id must be numeric", ex);
         }
     }
 
