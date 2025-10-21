@@ -278,7 +278,7 @@ public class SessionManager {
             long sessionId = Long.parseLong(Objects.requireNonNull(session.getId(), "session id required"));
             for (Student student : roster.getStudents()) {
                 statement.setLong(1, sessionId);
-                statement.setString(2, student.getId());
+                statement.setLong(2, Long.parseLong(student.getId()));
                 statement.setString(3, "PENDING");
                 statement.setNull(4, Types.VARCHAR);
                 statement.setNull(5, Types.VARCHAR);
@@ -305,7 +305,7 @@ public class SessionManager {
         try {
             String enrollmentDateRaw = resultSet.getString("enrollment_date");
             return new Student(
-                    resultSet.getString("id"),
+                    Long.toString(resultSet.getLong("id")),
                     resultSet.getString("name"),
                     resultSet.getString("class_group"),
                     resultSet.getString("email"),

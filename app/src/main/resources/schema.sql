@@ -1,6 +1,6 @@
 -- temporary (please change to suit ur needs)
 CREATE TABLE IF NOT EXISTS students (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     class_group TEXT,
     email TEXT,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS attendance_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id INTEGER NOT NULL,
-    student_id TEXT NOT NULL,
+    student_id INTEGER NOT NULL,
     status TEXT NOT NULL,
     marked_at TEXT,
     method TEXT,
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS attendance_records (
 -- temporary (please change to suit ur needs)
 CREATE TABLE IF NOT EXISTS face_data (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_id TEXT NOT NULL,
+    student_id INTEGER NOT NULL,
     storage_type TEXT NOT NULL DEFAULT 'FILE',
     data BLOB,
     file_path TEXT,

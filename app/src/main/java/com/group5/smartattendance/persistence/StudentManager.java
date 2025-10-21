@@ -10,17 +10,24 @@ import java.util.Optional;
 
 public class StudentManager {
 
-    public static void save(Student student) throws SQLException {
-        String sql = "INSERT INTO students (id, name, class_group, email, phone, enrollment_date) VALUES (?, ?, ?, ?, ?, ?)";
+    public static Student save(Student student) throws SQLException {
+        String sql = "INSERT INTO students (name, class_group, email, phone, enrollment_date) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, student.getId());
-            stmt.setString(2, student.getName());
-            stmt.setString(3, student.getClassGroup());
-            stmt.setString(4, student.getEmail());
-            stmt.setString(5, student.getPhone());
-            stmt.setString(6, student.getEnrollmentDate().toString());
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setString(1, student.getName());
+            stmt.setString(2, student.getClassGroup());
+            stmt.setString(3, student.getEmail());
+            stmt.setString(4, student.getPhone());
+            stmt.setString(5, student.getEnrollmentDate().toString());
             stmt.executeUpdate();
+            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    long generatedId = generatedKeys.getLong(1);
+                    return new Student(Long.toString(generatedId), student.getName(), student.getClassGroup(), student.getEmail(), student.getPhone(), student.getEnrollmentDate());
+                } else {
+                    throw new SQLException("Creating student failed, no ID obtained.");
+                }
+            }
         }
     }
 
@@ -47,7 +54,7 @@ public class StudentManager {
         String sql = "SELECT id, name, class_group, email, phone, enrollment_date FROM students WHERE id = ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, id);
+            stmt.setLong(1, Long.parseLong(id));
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     String name = rs.getString("name");
@@ -71,7 +78,7 @@ public class StudentManager {
             stmt.setString(3, student.getEmail());
             stmt.setString(4, student.getPhone());
             stmt.setString(5, student.getEnrollmentDate().toString());
-            stmt.setString(6, student.getId());
+            stmt.setLong(6, Long.parseLong(student.getId()));
             stmt.executeUpdate();
         }
     }
@@ -80,7 +87,7 @@ public class StudentManager {
         String sql = "DELETE FROM students WHERE id = ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, id);
+            stmt.setLong(1, Long.parseLong(id));
             stmt.executeUpdate();
         }
     }
