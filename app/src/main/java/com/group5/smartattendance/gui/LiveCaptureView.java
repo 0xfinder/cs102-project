@@ -20,9 +20,12 @@ import java.sql.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.List;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -36,15 +39,27 @@ import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.videoio.VideoCapture;
 
 import com.group5.smartattendance.core.CascadeLoader;
+import com.group5.smartattendance.persistence.StudentManager;
+import com.group5.smartattendance.student.Student;
 
 // Class - Swing Class
 public class LiveCaptureView extends JFrame {
     // Swing Elements
     private JLabel cameraScreen;
     private JButton btnCapture;
-    private JTextField textField;
-    private JLabel nameLabel;
     private JButton btnBack;
+
+    // private JCheckBox newStudentCheck;
+    // private JLabel newStudentLabel;
+
+    // private JLabel nameLabel;
+    // private JTextField nameTextField;
+    // private JLabel sidFromNameLabel;
+    private JButton btnRegisterNewStudent;
+
+    private JLabel sidLabel;
+    private JTextField sidTextField;
+    private JLabel nameFromSIDLabel;
 
     // Start camera
     private VideoCapture capture;
@@ -79,25 +94,59 @@ public class LiveCaptureView extends JFrame {
         btnBack.setBounds(0, 480, 80, 40);
         add(btnBack);
 
+        // Is New Student Checkbox
+        // newStudentCheck = new JCheckBox();
+        // newStudentCheck.setBounds(320, 480, 40, 40);
+        // add(newStudentCheck);
+
+        // newStudentLabel = new JLabel("New Student");
+        // newStudentLabel.setBounds(360, 480, 80, 40);
+        // add(newStudentLabel);
+
+        // NEW STUDENT UI
+        // Name Input, SID will be assigned and displayed after checking DB
         // Name Element
-        nameLabel = new JLabel("Name:");
-        nameLabel.setBounds(320, 480, 80, 40);
-        add(nameLabel);
+
+        btnRegisterNewStudent = new JButton("Register New Student");
+        btnRegisterNewStudent.setBounds(320, 480, 240, 40);
+        add(btnRegisterNewStudent);
+
+        // EXISTING STUDENT UI
+        // SID Input (case-sensitive), Name will be displayed if SID exists in DB,
+        // else "Not found"
+        sidLabel = new JLabel("SID:");
+        sidLabel.setBounds(320, 520, 80, 40);
+        add(sidLabel);
 
         // Text Field Element
-        textField = new JTextField("");
-        textField.setBounds(320 + 60, 480, 200, 40);
-        add(textField);
+        sidTextField = new JTextField("");
+        sidTextField.setBounds(320 + 60, 520, 200, 40);
+        add(sidTextField);
 
+        nameFromSIDLabel = new JLabel("Please enter an SID");
+        nameFromSIDLabel.setBounds(320, 560, 80, 40);
+        add(nameFromSIDLabel);
+
+        // Init button event listeners
+        buttonEvents();
+
+        setSize(new Dimension(640, 640));
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setVisible(true);
+    }
+
+    private void buttonEvents() {
         // Button Event Listener
+        // Capture button click
         btnCapture.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 clicked = true;
             }
         });
 
+        // Back Button
         btnBack.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -106,10 +155,43 @@ public class LiveCaptureView extends JFrame {
             }
         });
 
-        setSize(new Dimension(640, 560));
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setVisible(true);
+        // Checkbox update
+        btnRegisterNewStudent.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Open new view
+                System.out.println("Register Student View"); // dubug
+                new RegisterStudentView();
+            }
+        });
+
+        // On Text Field Enter
+        sidTextField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // update label text
+                String tempSid = sidTextField.getText();
+                String studentName = getNameFromSID(tempSid);
+                if (studentName.isEmpty()) {
+                    nameFromSIDLabel.setText("Invalid SID");
+                } else {
+                    nameFromSIDLabel.setText("Student: " + studentName);
+                }
+            }
+        });
+    }
+
+    private String getNameFromSID(String sid) {
+        try {
+            Optional<Student> student = StudentManager.findById(sid);
+            if (student.isPresent()) {
+                return student.get().getName();
+            } else {
+                return "";
+            }
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     // Creating a camera
@@ -188,7 +270,7 @@ public class LiveCaptureView extends JFrame {
 
     private void createFile(Mat imageToSave) {
         // Get name from text field
-        String name = textField.getText();
+        String name = sidTextField.getText(); // To Replace with SID
 
         // Blank name
         if (name.isBlank()) {
