@@ -6,24 +6,26 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class StudentManager {
 
-    public static Student save(Student student) throws SQLException {
+    public static Student save(String name, String classGroup, String email, String phone, Instant enrollmentDate) throws SQLException {
+        Objects.requireNonNull(name, "name must not be null");
         String sql = "INSERT INTO students (name, class_group, email, phone, enrollment_date) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setString(1, student.getName());
-            stmt.setString(2, student.getClassGroup());
-            stmt.setString(3, student.getEmail());
-            stmt.setString(4, student.getPhone());
-            stmt.setString(5, student.getEnrollmentDate().toString());
+            stmt.setString(1, name);
+            stmt.setString(2, classGroup);
+            stmt.setString(3, email);
+            stmt.setString(4, phone);
+            stmt.setString(5, enrollmentDate.toString());
             stmt.executeUpdate();
             try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     long generatedId = generatedKeys.getLong(1);
-                    return new Student(Long.toString(generatedId), student.getName(), student.getClassGroup(), student.getEmail(), student.getPhone(), student.getEnrollmentDate());
+                    return new Student(Long.toString(generatedId), name, classGroup, email, phone, enrollmentDate);
                 } else {
                     throw new SQLException("Creating student failed, no ID obtained.");
                 }
