@@ -31,7 +31,7 @@ public class AlertBoxView extends JFrame {
         this.setTitle(titleMsg);
 
         // UI Elements
-        btnOk = new JButton("OK");
+        btnOk = new JButton("Close");
         btnOk.setBounds((window_w - 240) / 2, window_h - 120, 240, 40);
         add(btnOk);
 

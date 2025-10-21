@@ -51,6 +51,7 @@ public class RegisterStudentView extends JFrame {
     private JLabel stdDateDisplayField; // Date will always show today
 
     private JButton btnRegister;
+    private JButton btnBack;
 
     public RegisterStudentView() {
         // Designing UI
@@ -60,9 +61,13 @@ public class RegisterStudentView extends JFrame {
         this.setTitle("Register New Student");
 
         // UI Elements
-        btnRegister = new JButton("capture");
-        btnRegister.setBounds((window_w - 80) / 2, window_h - 120, 80, 40);
+        btnRegister = new JButton("Register");
+        btnRegister.setBounds(((window_w - 80) / 2) - 80, window_h - 120, 120, 40);
         add(btnRegister);
+
+        btnBack = new JButton("Back");
+        btnBack.setBounds(((window_w - 80) / 2) + 80, window_h - 120, 120, 40);
+        add(btnBack);
 
         // row 1
         stdNameLabel = new JLabel("Name: ");
@@ -137,10 +142,16 @@ public class RegisterStudentView extends JFrame {
                 if (!student.getId().isBlank()) {
                     new AlertBoxView("Student registered with SID: " + student.getId(),
                             "Student Successfully Registered");
-                    dispose();
                 } else {
                     new AlertBoxView("Error registering student", "Student Unsuccessfully Registered");
                 }
+            }
+        });
+
+        btnBack.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dispose();
             }
         });
     }
