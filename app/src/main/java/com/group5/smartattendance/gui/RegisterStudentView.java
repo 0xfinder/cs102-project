@@ -4,6 +4,9 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.Instant;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -12,6 +15,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
 import com.group5.smartattendance.gui.AlertBoxView;
+import com.group5.smartattendance.persistence.StudentManager;
+import com.group5.smartattendance.student.Student;
 
 public class RegisterStudentView extends JFrame {
     // open new alertBoxView window
@@ -79,7 +84,7 @@ public class RegisterStudentView extends JFrame {
         add(stdClassGroupField);
 
         // row 3
-        stdEmailLabel = new JLabel("Class Group: ");
+        stdEmailLabel = new JLabel("Email Address: ");
         stdEmailLabel.setBounds(margin_x, margin_y + 2 * (label_h + gapSize), label_w, label_h);
         add(stdEmailLabel);
 
@@ -89,7 +94,7 @@ public class RegisterStudentView extends JFrame {
         add(stdEmailField);
 
         // row 4
-        stdPhoneLabel = new JLabel("Class Group: ");
+        stdPhoneLabel = new JLabel("Phone Number: ");
         stdPhoneLabel.setBounds(margin_x, margin_y + 3 * (label_h + gapSize), label_w, label_h);
         add(stdPhoneLabel);
 
@@ -99,11 +104,11 @@ public class RegisterStudentView extends JFrame {
         add(stdPhoneField);
 
         // row 5
-        stdDateLabel = new JLabel("Class Group: ");
+        stdDateLabel = new JLabel("Date: ");
         stdDateLabel.setBounds(margin_x, margin_y + 4 * (label_h + gapSize), label_w, label_h);
         add(stdDateLabel);
 
-        stdDateDisplayField = new JLabel("Today's Date");
+        stdDateDisplayField = new JLabel(LocalDate.now().toString());
         stdDateDisplayField.setBounds(window_w - margin_x - textField_w, margin_y + 4 * (label_h + gapSize),
                 textField_w,
                 textField_h);
@@ -128,18 +133,31 @@ public class RegisterStudentView extends JFrame {
         btnRegister.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                registerStudent();
-                new AlertBoxView("Student registered with SID: ...", "Student Successfully Registered");
-                dispose();
+                Student student = registerStudent();
+                if (!student.getId().isBlank()) {
+                    new AlertBoxView("Student registered with SID: " + student.getId(),
+                            "Student Successfully Registered");
+                    dispose();
+                } else {
+                    new AlertBoxView("Error registering student", "Student Unsuccessfully Registered");
+                }
             }
         });
     }
 
-    private void registerStudent() {
+    private Student registerStudent() {
         // add to db
-    }
+        String stdName = stdNameField.getText();
+        String stdClassGrp = stdClassGroupField.getText();
+        String stdEmail = stdEmailField.getText();
+        String stdPhone = stdPhoneField.getText();
+        LocalDate date = LocalDate.now();
+        Instant stdDate = date.atStartOfDay(ZoneId.systemDefault()).toInstant();
 
-    private int getNewSID() {
-        // read from db
+        try {
+            return StudentManager.save(stdName, stdClassGrp, stdEmail, stdPhone, stdDate);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

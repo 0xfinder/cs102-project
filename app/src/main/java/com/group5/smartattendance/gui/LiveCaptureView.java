@@ -270,15 +270,15 @@ public class LiveCaptureView extends JFrame {
 
     private void createFile(Mat imageToSave) {
         // Get name from text field
-        String name = sidTextField.getText(); // To Replace with SID
+        String sid = sidTextField.getText(); // To Replace with SID
 
         // Blank name
-        if (name.isBlank()) {
-            name = "unnamed";
+        if (sid.isBlank()) {
+            sid = "unnamed";
         }
 
         // Create folder if folder doesn't exist
-        Path studentFolder = Paths.get(saveFolder, name);
+        Path studentFolder = Paths.get(saveFolder, sid);
         try {
             Files.createDirectories(studentFolder);
         } catch (Exception e) {
@@ -290,7 +290,7 @@ public class LiveCaptureView extends JFrame {
         int imageIndex = studentFolder.toFile().list().length;
 
         // Write to file
-        Path output = studentFolder.resolve(String.format("%s_%02d.jpg", name, imageIndex));
+        Path output = studentFolder.resolve(String.format("%s_%02d.jpg", sid, imageIndex));
         Imgcodecs.imwrite(output.toString(),
                 imageToSave);
     }
