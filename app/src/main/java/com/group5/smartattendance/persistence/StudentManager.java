@@ -40,7 +40,7 @@ public class StudentManager {
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                String id = rs.getString("id");
+                String id = Long.toString(rs.getLong("id"));
                 String name = rs.getString("name");
                 String classGroup = rs.getString("class_group");
                 String email = rs.getString("email");
