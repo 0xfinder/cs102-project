@@ -18,7 +18,7 @@ public class SessionView extends JFrame {
 
     private JTable sessionTable;
     private DefaultTableModel sessionModel;
-    private JButton btnEdit, btnNewSession, btnDelete;
+    private JButton btnEdit, btnNewSession, btnDelete, btnBack;
     private SessionManager sessionManager;
     private List<Session> sessions = new ArrayList<>();
 
@@ -54,21 +54,26 @@ public class SessionView extends JFrame {
 
         // Edit button
         btnEdit = new JButton("Edit Session");
-        btnEdit.setBounds(100, 350, 150, 30);
+        btnEdit.setBounds(55, 350, 150, 30);
         btnEdit.addActionListener(e -> openSelectedSession());
         add(btnEdit);
 
         // Add new session
         btnNewSession = new JButton("New Session");
-        btnNewSession.setBounds(300, 350, 150, 30);
+        btnNewSession.setBounds(235, 350, 150, 30);
         btnNewSession.addActionListener(e -> createNewSession());
         add(btnNewSession);
 
         // Delete session
         btnDelete = new JButton("Delete Session");
-        btnDelete.setBounds(500, 350, 150, 30);
+        btnDelete.setBounds(415, 350, 150, 30);
         btnDelete.addActionListener(e -> deleteSelectedSession());
         add(btnDelete);
+
+        btnBack = new JButton("Back");
+        btnBack.setBounds(595, 350, 150, 30);
+        btnBack.addActionListener(e -> dispose());
+        add(btnBack);
 
         setVisible(true);
     }
