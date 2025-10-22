@@ -160,13 +160,16 @@ public class RegisterStudentView extends JFrame {
         // add to db
         String stdName = stdNameField.getText();
         String stdClassGrp = stdClassGroupField.getText();
-        String stdEmail = stdEmailField.getText();
-        String stdPhone = stdPhoneField.getText();
+        String stdEmail = stdEmailField.getText(); // Optional
+        String stdPhone = stdPhoneField.getText(); // Optional
         LocalDate date = LocalDate.now();
         Instant stdDate = date.atStartOfDay(ZoneId.systemDefault()).toInstant();
 
         try {
-            return StudentManager.save(stdName, stdClassGrp, stdEmail, stdPhone, stdDate);
+            if (!stdName.isBlank() && !stdClassGrp.isBlank()) { // Validation
+                return StudentManager.save(stdName, stdClassGrp, stdEmail, stdPhone, stdDate);
+            }
+            return null;
         } catch (Exception e) {
             return null;
         }
