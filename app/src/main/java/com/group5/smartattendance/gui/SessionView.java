@@ -402,16 +402,22 @@ public class SessionView extends JFrame {
             attendanceModel = new DefaultTableModel(tableRows.toArray(new Object[0][]), columns) {
                 @Override
                 public boolean isCellEditable(int row, int col) {
-                    // Allow editing Included, Status, Timestamp, and Method columns
-                    return col == 0 || col == 3 || col == 4 || col == 5;
+                    // Always allow editing the "Included" checkbox
+                    if (col == 0)
+                        return true;
+
+                    // Only allow editing of other fields if "Included" is checked
+                    Boolean included = (Boolean) getValueAt(row, 0);
+                    if (included != null && included) {
+                        return col == 3 || col == 4 || col == 5; // Status, Timestamp, Method
+                    }
+
+                    return false;
                 }
 
                 @Override
                 public Class<?> getColumnClass(int columnIndex) {
-                    if (columnIndex == 0) { // Included checkbox
-                        return Boolean.class;
-                    }
-                    return String.class;
+                    return columnIndex == 0 ? Boolean.class : String.class;
                 }
             };
 
