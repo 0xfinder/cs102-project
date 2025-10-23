@@ -108,7 +108,7 @@ public class LiveCaptureView extends JFrame {
         // Name Element
 
         btnRegisterNewStudent = new JButton("Register New Student");
-        btnRegisterNewStudent.setBounds(320, 480, 240, 40);
+        btnRegisterNewStudent.setBounds(320 + 60, 480, 200, 40);
         add(btnRegisterNewStudent);
 
         // EXISTING STUDENT UI
@@ -119,12 +119,17 @@ public class LiveCaptureView extends JFrame {
         add(sidLabel);
 
         // Text Field Element
+        JLabel sLabel = new JLabel("S");
+        sLabel.setBounds(320 + 60, 520, 10, 40);
+        add(sLabel);
+
         sidTextField = new JTextField("");
-        sidTextField.setBounds(320 + 60, 520, 200, 40);
+        sidTextField.setBounds(320 + 70, 520, 190, 40);
         add(sidTextField);
 
-        nameFromSIDLabel = new JLabel("Please enter an SID");
-        nameFromSIDLabel.setBounds(320, 560, 80, 40);
+        // Name Display Label
+        nameFromSIDLabel = new JLabel("Please enter an SID and press Enter");
+        nameFromSIDLabel.setBounds(320, 560, 300, 40);
         add(nameFromSIDLabel);
 
         // Init button event listeners
