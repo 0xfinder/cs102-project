@@ -139,7 +139,7 @@ public class RegisterStudentView extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 Student student = registerStudent();
-                if (!student.getId().isBlank()) {
+                if (student != null) {
                     new AlertBoxView("Student registered with SID: " + student.getId(),
                             "Student Successfully Registered");
                 } else {
