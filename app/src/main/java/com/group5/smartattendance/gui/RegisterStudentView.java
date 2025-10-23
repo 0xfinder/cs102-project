@@ -142,8 +142,6 @@ public class RegisterStudentView extends JFrame {
                 if (student != null) {
                     new AlertBoxView("Student registered with SID: " + student.getId(),
                             "Student Successfully Registered");
-                } else {
-                    new AlertBoxView("Error registering student", "Student Unsuccessfully Registered");
                 }
             }
         });
@@ -168,9 +166,12 @@ public class RegisterStudentView extends JFrame {
         try {
             if (!stdName.isBlank() && !stdClassGrp.isBlank()) { // Validation
                 return StudentManager.save(stdName, stdClassGrp, stdEmail, stdPhone, stdDate);
+            } else {
+                new AlertBoxView("Student Name and Class/Group cannot be blank!", "Student Unsuccessfully Registered");
+                return null;
             }
-            return null;
         } catch (Exception e) {
+            new AlertBoxView(e.getMessage(), "Student Unsuccessfully Registered");
             return null;
         }
     }
