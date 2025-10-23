@@ -43,6 +43,7 @@ import com.group5.smartattendance.student.FaceData;
 import com.group5.smartattendance.core.CascadeLoader;
 import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.session.SessionManager;
+import com.group5.smartattendance.persistence.StudentManager;
 
 // Class - Swing Class
 public class LiveRecognitionView extends JFrame {
@@ -60,11 +61,13 @@ public class LiveRecognitionView extends JFrame {
     private Mat webcamFrame;
     private Mat gray;
 
-    private String detectedName = "unknown";
+    private String detectedStudent = "unknown";
 
     // OpenCV Stuff
     private String saveFolder = "images";
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
+
+    private double threshold = 0.7; // if unable to hit threshold, get more traning data
 
     private SessionManager sm = new SessionManager();
     private String selectedCourse;
@@ -110,7 +113,7 @@ public class LiveRecognitionView extends JFrame {
         add(dropdownSession);
 
         // Name Element
-        nameLabel = new JLabel("Detected Student: " + detectedName);
+        nameLabel = new JLabel("Detected Student: " + detectedStudent);
         nameLabel.setBounds(640 - 280, 520, 240, 40);
         add(nameLabel);
 
@@ -197,7 +200,7 @@ public class LiveRecognitionView extends JFrame {
         // Rect[] faceArray = faces.toArray();
 
         // init detectedName to "No Student Detected" if no faces are detected
-        detectedName = "No Student Detected";
+        detectedStudent = "No Student Detected";
         for (Rect rect : faces.toArray()) {
             // Draw rectangle
             Imgproc.rectangle(webcamFrame, new Point(rect.x, rect.y),
@@ -213,16 +216,25 @@ public class LiveRecognitionView extends JFrame {
             List<FaceData> studentFaceData = getFaceData();
 
             // Compare with training histograms
-            detectedName = computeBestChoice(faceHist, studentFaceData);
+            String detectedStudentID = computeBestChoice(faceHist, studentFaceData);
+            String studentName = "";
+
+            try {
+                studentName = StudentManager.findById(detectedStudentID).get().getName();
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+
+            detectedStudent = "SID: S" + detectedStudentID + ", " + studentName;
 
             // Label based on best score (correlation: higher is better)
-            Imgproc.putText(webcamFrame, detectedName, new Point(rect.x, rect.y - 10),
+            Imgproc.putText(webcamFrame, detectedStudent, new Point(rect.x, rect.y - 10),
                     Imgproc.FONT_HERSHEY_SIMPLEX, 0.9, new Scalar(0, 255, 0), 2);
 
         }
 
         // Update (other) label text
-        nameLabel.setText("Detected Student: " + detectedName);
+        nameLabel.setText("Detected Student: " + detectedStudent);
 
         // Display frame
         BufferedImage image = matToBufferedImage(webcamFrame);
@@ -263,6 +275,7 @@ public class LiveRecognitionView extends JFrame {
         return image;
     }
 
+    // To replace once FaceData class has been integrated into Student class
     private List<FaceData> getFaceData() {
         List<FaceData> studentFaceData = new ArrayList<>();
 
@@ -283,6 +296,7 @@ public class LiveRecognitionView extends JFrame {
         return studentFaceData;
     }
 
+    // To replace once FaceData class has been integrated into Student class
     private FaceData createFaceData(String studentName) {
         // use paths for cross platform support
         Path studentFolder = Paths.get(saveFolder, studentName);
@@ -294,13 +308,12 @@ public class LiveRecognitionView extends JFrame {
     private String computeBestChoice(Mat faceHist, List<FaceData> studentFaceData) {
         double highestScore = 0.0;
         String highestScoreName = "unknown";
-        final double threshold = 0.7; // if unable to hit threshold, get more traning data
 
         for (FaceData studentFD : studentFaceData) {
             double currScore = studentFD.getBestHistogramScore(faceHist);
             // debug
             // System.out.println(studentFD.getStudentName() + " " + currScore);
-            if (currScore > threshold && currScore > highestScore) {
+            if (currScore > threshold && currScore > highestScore) { // threshold data
                 highestScore = currScore;
                 highestScoreName = studentFD.getStudentName();
             }
@@ -311,19 +324,23 @@ public class LiveRecognitionView extends JFrame {
 
     // To Update when AttendanceManager is done
     private void markAttendance() {
-        if (detectedName.equals("No Student Detected")) {
+        if (detectedStudent.equals("No Student Detected")) {
             new AlertBoxView("No Face Detected!", "Error Marking Attendance");
         } else if (selectedCourse == null) {
             new AlertBoxView("No Session Selected!", "Error Marking Attendance");
         } else {
             new AlertBoxView(
                     String.format("Attendence Marked for %s in session ID %s.",
-                            detectedName,
+                            detectedStudent,
                             selectedCourse),
                     "Attendance Marked Succesfully");
 
             // AttendanceManager here
         }
+    }
+
+    public void setThreshold(double threshold) {
+        this.threshold = threshold;
     }
 
     // UNUSED: Main driver method
