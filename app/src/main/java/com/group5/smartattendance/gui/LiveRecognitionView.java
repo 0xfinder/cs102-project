@@ -40,6 +40,7 @@ import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.videoio.VideoCapture;
 
 import com.group5.smartattendance.student.FaceData;
+import com.group5.smartattendance.student.Student;
 import com.group5.smartattendance.core.CascadeLoader;
 import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.session.SessionManager;
@@ -279,35 +280,45 @@ public class LiveRecognitionView extends JFrame {
     private List<FaceData> getFaceData() {
         List<FaceData> studentFaceData = new ArrayList<>();
 
-        File folder = new File(saveFolder);
-        if (!folder.exists() || !folder.isDirectory()) {
-            return studentFaceData;
-        }
+        // OLD METHOD: Read from folder name
+        // File folder = new File(saveFolder);
+        // if (!folder.exists() || !folder.isDirectory()) {
+        // return studentFaceData;
+        // }
 
-        String[] studentsNames = folder.list();
-        if (studentsNames != null) {
-            for (String name : studentsNames) {
-                if (!name.equals("unnamed")) {
-                    studentFaceData.add(createFaceData(name));
-                }
+        // String[] studentsNames = folder.list();
+        // if (studentsNames != null) {
+        // for (String name : studentsNames) {
+        // if (!name.equals("unnamed")) {
+        // studentFaceData.add(createFaceData(name));
+        // }
+        // }
+        // }
+
+        try {
+            List<Student> studentList = StudentManager.findAll();
+            for (Student student : studentList) {
+                studentFaceData.add(student.getFaceData());
             }
+        } catch (Exception e) {
+            System.out.println(e);
         }
-
         return studentFaceData;
+
     }
 
-    // To replace once FaceData class has been integrated into Student class
-    private FaceData createFaceData(String studentName) {
+    // DEPRICATED
+    private FaceData createFaceData(String studentId) {
         // use paths for cross platform support
-        Path studentFolder = Paths.get(saveFolder, studentName);
+        Path studentFolder = Paths.get(saveFolder, studentId);
         FaceData fd = new FaceData(studentFolder.toString());
-        fd.setStudentName(studentName);
+        fd.setStudentID(studentId);
         return fd;
     }
 
     private String computeBestChoice(Mat faceHist, List<FaceData> studentFaceData) {
         double highestScore = 0.0;
-        String highestScoreName = "unknown";
+        String highestScoreID = "unknown";
 
         for (FaceData studentFD : studentFaceData) {
             double currScore = studentFD.getBestHistogramScore(faceHist);
@@ -315,11 +326,11 @@ public class LiveRecognitionView extends JFrame {
             // System.out.println(studentFD.getStudentName() + " " + currScore);
             if (currScore > threshold && currScore > highestScore) { // threshold data
                 highestScore = currScore;
-                highestScoreName = studentFD.getStudentName();
+                highestScoreID = studentFD.getStudentID();
             }
         }
 
-        return highestScoreName;
+        return highestScoreID;
     }
 
     // To Update when AttendanceManager is done

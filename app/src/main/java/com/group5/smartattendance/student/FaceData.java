@@ -18,7 +18,7 @@ public class FaceData {
     private List<Mat> histograms = new ArrayList<>();
 
     // Temporary until Student Class is finished
-    private String studentName;
+    private String studentId;
 
     public FaceData(String imageDir) {
         // from faceRecognitionDemo.java
@@ -81,11 +81,11 @@ public class FaceData {
         return histograms;
     }
 
-    public String getStudentName() {
-        return studentName;
+    public String getStudentID() {
+        return studentId;
     }
 
-    public void setStudentName(String sN) {
-        studentName = sN;
+    public void setStudentID(String sid) {
+        studentId = sid;
     }
 }
