@@ -45,11 +45,13 @@ public class ReportView extends JFrame {
         summaryLabel.setBounds(50, 110, 200, 25);
         add(summaryLabel);
 
-        String[] summaryColumns = { "Statistic", "Value" };
-        DefaultTableModel summaryModel = new DefaultTableModel(null, summaryColumns);
+        DefaultTableModel summaryModel = new DefaultTableModel(0, 2);
+
         summaryTable = new JTable(summaryModel);
+        summaryTable.setTableHeader(null);
         JScrollPane summaryScrollPane = new JScrollPane(summaryTable);
-        summaryScrollPane.setBounds(50, 140, window_w - 100, 100);
+        summaryScrollPane.setColumnHeaderView(null);
+        summaryScrollPane.setBounds(50, 140, window_w - 100, 68);
         add(summaryScrollPane);
 
         // Detail table with Notes column
