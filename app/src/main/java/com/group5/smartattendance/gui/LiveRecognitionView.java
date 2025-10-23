@@ -26,6 +26,7 @@ import java.util.Objects;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -40,6 +41,8 @@ import org.opencv.videoio.VideoCapture;
 
 import com.group5.smartattendance.student.FaceData;
 import com.group5.smartattendance.core.CascadeLoader;
+import com.group5.smartattendance.session.Session;
+import com.group5.smartattendance.session.SessionManager;
 
 // Class - Swing Class
 public class LiveRecognitionView extends JFrame {
@@ -48,6 +51,7 @@ public class LiveRecognitionView extends JFrame {
     private JButton btnMarkAttendance;
     private JLabel nameLabel;
     private JButton btnBack;
+    private JComboBox dropdownSession;
 
     // Start camera
     private VideoCapture capture;
@@ -61,6 +65,9 @@ public class LiveRecognitionView extends JFrame {
     // OpenCV Stuff
     private String saveFolder = "images";
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
+
+    private SessionManager sm = new SessionManager();
+    private String selectedCourse;
 
     public LiveRecognitionView() {
         // Designing UI
@@ -83,9 +90,28 @@ public class LiveRecognitionView extends JFrame {
         btnBack.setBounds(0, 480, 80, 40);
         add(btnBack);
 
+        // Get Sessions
+        List<Session> sessions = sm.listSessions();
+        List<String> sessionNames = new ArrayList<>();
+        for (Session session : sessions) {
+            sessionNames.add("C" + session.getId() + " - " + session.getCourseName());
+        }
+
+        // Dropdown
+        String[] sessionNamesArr = { "No Sessions Found" };
+
+        if (sessionNames.size() != 0) {
+            sessionNamesArr = sessionNames.toArray(new String[0]);
+        }
+
+        dropdownSession = new JComboBox(sessionNamesArr);
+        dropdownSession.setBounds(640 - 280, 480, 240, 40);
+        dropdownSession.setSelectedIndex(0);
+        add(dropdownSession);
+
         // Name Element
         nameLabel = new JLabel("Detected Student: " + detectedName);
-        nameLabel.setBounds(640 - 240, 480, 240, 40);
+        nameLabel.setBounds(640 - 280, 520, 240, 40);
         add(nameLabel);
 
         // Button Event Listener
@@ -105,7 +131,16 @@ public class LiveRecognitionView extends JFrame {
             }
         });
 
-        setSize(new Dimension(640, 560));
+        dropdownSession.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                selectedCourse = ((String) dropdownSession.getSelectedItem()).split(" - ")[0].substring(1);
+                System.out.println(selectedCourse);
+            }
+        });
+
+        setSize(new Dimension(640, 640));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setVisible(true);
@@ -274,16 +309,24 @@ public class LiveRecognitionView extends JFrame {
         return highestScoreName;
     }
 
-    // To Update
+    // To Update when AttendanceManager is done
     private void markAttendance() {
-        if (detectedName.equals("No Student Detected!")) {
-            System.out.println("No Face Detected!");
+        if (detectedName.equals("No Student Detected")) {
+            new AlertBoxView("No Face Detected!", "Error Marking Attendance");
+        } else if (selectedCourse == null) {
+            new AlertBoxView("No Session Selected!", "Error Marking Attendance");
         } else {
-            System.out.printf("Attendence Marked for %s%n", detectedName);
+            new AlertBoxView(
+                    String.format("Attendence Marked for %s in session ID %s.",
+                            detectedName,
+                            selectedCourse),
+                    "Attendance Marked Succesfully");
+
+            // AttendanceManager here
         }
     }
 
-    // Main driver method
+    // UNUSED: Main driver method
     public static void main(String[] args) {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         EventQueue.invokeLater(new Runnable() {
