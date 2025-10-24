@@ -30,7 +30,7 @@ public final class AttendanceRecord extends Entity {
     private final Session session;
     private final Student student;
     private final Optional<Method> method;
-    private final Instant markedAt;
+    private final Optional<Instant> markedAt;
     private final double confidence;
     private final String notes;
     private final Status status;
@@ -42,7 +42,7 @@ public final class AttendanceRecord extends Entity {
             Student student,
             Status status,
             Optional<Method> method,
-            Instant markedAt,
+            Optional<Instant> markedAt,
             double confidence,
             String notes) {
         super(id);
@@ -50,7 +50,7 @@ public final class AttendanceRecord extends Entity {
         this.student = Objects.requireNonNull(student, "student must not be null");
         this.status = Objects.requireNonNull(status, "status must not be null");
         this.method = method == null ? Optional.empty() : method;
-        this.markedAt = Objects.requireNonNull(markedAt, "markedAt must not be null");
+        this.markedAt = markedAt == null ? Optional.empty() : markedAt;
         this.confidence = confidence;
         this.notes = notes;
     }
@@ -69,7 +69,7 @@ public final class AttendanceRecord extends Entity {
                 student,
                 status,
                 Optional.of(Method.AUTO),
-                markedAt,
+                Optional.ofNullable(markedAt),
                 confidence,
                 notes);
     }
@@ -87,7 +87,7 @@ public final class AttendanceRecord extends Entity {
                 student,
                 status,
                 Optional.of(Method.MANUAL),
-                markedAt,
+                Optional.ofNullable(markedAt),
                 Double.NaN,
                 notes);
     }
@@ -98,7 +98,10 @@ public final class AttendanceRecord extends Entity {
         Status status = Status.valueOf(rs.getString("status"));
         String methodStr = rs.getString("method");
         Optional<Method> method = methodStr == null ? Optional.empty() : Optional.of(Method.valueOf(methodStr));
-        Instant markedAt = Instant.parse(rs.getString("marked_at"));
+        String markedAtRaw = rs.getString("marked_at");
+        Optional<Instant> markedAt = (markedAtRaw == null || markedAtRaw.isBlank())
+                ? Optional.empty()
+                : Optional.of(Instant.parse(markedAtRaw));
         double confidence = rs.getObject("confidence") == null ? Double.NaN : rs.getDouble("confidence");
         String notes = rs.getString("notes");
 
@@ -140,12 +143,12 @@ public final class AttendanceRecord extends Entity {
         return method;
     }
 
-    public Instant getMarkedAt() {
+    public Optional<Instant> getMarkedAt() {
         return markedAt;
     }
 
     public Optional<Instant> getLastSeen() {
-        return Optional.of(markedAt);
+        return markedAt;
     }
 
     public double getConfidence() {
@@ -161,7 +164,11 @@ public final class AttendanceRecord extends Entity {
         statement.setLong(1, Long.parseLong(session.getId()));
         statement.setLong(2, Long.parseLong(student.getId()));
         statement.setString(3, status.name());
-        statement.setString(4, markedAt.toString());
+        if (markedAt.isPresent()) {
+            statement.setString(4, markedAt.get().toString());
+        } else {
+            statement.setNull(4, java.sql.Types.VARCHAR);
+        }
         if (method.isPresent()) {
             statement.setString(5, method.get().name());
         } else {
@@ -182,7 +189,11 @@ public final class AttendanceRecord extends Entity {
     // bind to update statement
     public void bindUpdate(PreparedStatement statement) throws SQLException {
         statement.setString(1, status.name());
-        statement.setString(2, markedAt.toString());
+        if (markedAt.isPresent()) {
+            statement.setString(2, markedAt.get().toString());
+        } else {
+            statement.setNull(2, java.sql.Types.VARCHAR);
+        }
         if (method.isPresent()) {
             statement.setString(3, method.get().name());
         } else {
@@ -194,11 +205,11 @@ public final class AttendanceRecord extends Entity {
             statement.setDouble(4, confidence);
         }
         if (notes == null) {
-            statement.setNull(6, java.sql.Types.VARCHAR);
+            statement.setNull(5, java.sql.Types.VARCHAR);
         } else {
-            statement.setString(6, notes);
+            statement.setString(5, notes);
         }
-        statement.setLong(7, Long.parseLong(getId()));
+        statement.setLong(6, Long.parseLong(getId()));
     }
 
     // set id
@@ -224,7 +235,7 @@ public final class AttendanceRecord extends Entity {
                 student,
                 status,
                 Optional.of(Method.MANUAL),
-                markedAt,
+                Optional.ofNullable(markedAt),
                 Double.NaN,
                 notes != null ? notes : this.notes);
     }
@@ -239,7 +250,7 @@ public final class AttendanceRecord extends Entity {
                 student,
                 status,
                 Optional.of(Method.AUTO),
-                markedAt,
+                Optional.ofNullable(markedAt),
                 confidence,
                 notes != null ? notes : this.notes);
     }
