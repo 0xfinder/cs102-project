@@ -69,6 +69,7 @@ public class LiveRecognitionView extends JFrame {
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
 
     private double threshold = 0.7; // Get value from OptionsManager when done
+    private int webcamIndex = 0; // Get value from OptionsManager when done
 
     private SessionManager sm = new SessionManager();
     private String selectedCourse;
@@ -153,7 +154,7 @@ public class LiveRecognitionView extends JFrame {
     // Creating a camera
     public void startCamera() {
         // Start Webcam
-        capture = new VideoCapture(0);
+        capture = new VideoCapture(webcamIndex);
         if (!capture.isOpened()) {
             System.out.println("Error opening webcam!");
             return;

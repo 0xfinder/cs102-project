@@ -72,6 +72,7 @@ public class LiveCaptureView extends JFrame {
     // OpenCV Stuff
     // private String saveFolder = "images";
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
+    private int webcamIndex = 0; // Get value from OptionsManager when done
 
     public LiveCaptureView() {
         // Designing UI
@@ -215,7 +216,7 @@ public class LiveCaptureView extends JFrame {
     // Creating a camera
     public void startCamera() {
         // Start Webcam
-        capture = new VideoCapture(0);
+        capture = new VideoCapture(webcamIndex);
         if (!capture.isOpened()) {
             System.out.println("Error opening webcam!");
             return;
