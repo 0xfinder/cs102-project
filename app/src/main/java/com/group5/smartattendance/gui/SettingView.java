@@ -1,9 +1,12 @@
-// Myat
+
 package com.group5.smartattendance.gui;
+
+import com.group5.smartattendance.core.Configuration;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 
 public class SettingView extends JFrame {
 
@@ -13,13 +16,14 @@ public class SettingView extends JFrame {
     private JTextField dbPathField;
     private JButton btnSave;
     private JButton btnCancel;
+    private JButton btnBrowse;
 
     public SettingView() {
         setTitle("Settings");
         setLayout(null);
 
-        final int window_w = 500;
-        final int window_h = 300;
+        final int window_w = 550;
+        final int window_h = 330;
 
         headerLabel = new JLabel("System Settings", SwingConstants.CENTER);
         headerLabel.setFont(new Font("Dialog", Font.BOLD, 20));
@@ -30,7 +34,7 @@ public class SettingView extends JFrame {
         camLabel.setBounds(50, 70, 150, 25);
         add(camLabel);
 
-        cameraIndexField = new JTextField("0"); // Default camera
+        cameraIndexField = new JTextField("0");
         cameraIndexField.setBounds(200, 70, 200, 25);
         add(cameraIndexField);
 
@@ -46,43 +50,51 @@ public class SettingView extends JFrame {
         dbPathLabel.setBounds(50, 150, 150, 25);
         add(dbPathLabel);
 
-        dbPathField = new JTextField("data/database.db");
+        dbPathField = new JTextField(Configuration.getInstance().getDbPath());
         dbPathField.setBounds(200, 150, 200, 25);
         add(dbPathField);
 
+        btnBrowse = new JButton("Browse");
+        btnBrowse.setBounds(410, 150, 90, 25);
+        add(btnBrowse);
+
         btnSave = new JButton("Save");
-        btnSave.setBounds(120, 200, 100, 30);
+        btnSave.setBounds(120, 220, 100, 30);
         add(btnSave);
 
         btnCancel = new JButton("Cancel");
-        btnCancel.setBounds(280, 200, 100, 30);
+        btnCancel.setBounds(280, 220, 100, 30);
         add(btnCancel);
 
-        // Save settings (you can connect to a Configuration class later)
-        btnSave.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String cameraIndex = cameraIndexField.getText();
-                String threshold = thresholdField.getText();
-                String dbPath = dbPathField.getText();
-
-                // Here you'd update your Configuration singleton or write to file
-                System.out.println("Saving Settings:");
-                System.out.println("Camera Index: " + cameraIndex);
-                System.out.println("Threshold: " + threshold);
-                System.out.println("DB Path: " + dbPath);
-
-                JOptionPane.showMessageDialog(null, "Settings saved successfully!");
-                dispose();
+        // BROWSE button logic
+        btnBrowse.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Select SQLite DB file");
+            int result = fileChooser.showOpenDialog(null);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File selectedFile = fileChooser.getSelectedFile();
+                dbPathField.setText(selectedFile.getAbsolutePath());
             }
         });
 
-        btnCancel.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose(); // Close window
-            }
+        // SAVE button logic
+        btnSave.addActionListener(e -> {
+            String cameraIndex = cameraIndexField.getText();
+            String threshold = thresholdField.getText();
+            String dbPath = dbPathField.getText();
+
+            Configuration.getInstance().setDbPath(dbPath);  // Save to global config
+
+            System.out.println("Saving Settings:");
+            System.out.println("Camera Index: " + cameraIndex);
+            System.out.println("Threshold: " + threshold);
+            System.out.println("DB Path: " + dbPath);
+
+            JOptionPane.showMessageDialog(null, "Settings saved successfully!");
+            dispose();
         });
+
+        btnCancel.addActionListener(e -> dispose());
 
         setSize(window_w, window_h);
         setLocationRelativeTo(null);
