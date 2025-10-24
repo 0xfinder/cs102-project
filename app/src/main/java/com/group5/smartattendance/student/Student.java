@@ -16,6 +16,7 @@ public class Student extends Entity {
     private final Instant enrollmentDate;
     private final FaceData faceData;
 
+    private final Path faceImagesPath;
     private final String saveFolder = "images";
 
     public Student(String id, String name, String classGroup, String email, String phone, Instant enrollmentDate) {
@@ -26,7 +27,7 @@ public class Student extends Entity {
         this.phone = phone;
         this.enrollmentDate = enrollmentDate != null ? enrollmentDate : Instant.now();
 
-        Path faceImagesPath = Paths.get(saveFolder, id);
+        faceImagesPath = Paths.get(saveFolder, id);
         this.faceData = new FaceData(faceImagesPath.toString());
         this.faceData.setStudentID(id);
     }
@@ -53,6 +54,10 @@ public class Student extends Entity {
 
     public Instant getEnrollmentDate() {
         return enrollmentDate;
+    }
+
+    public Path getFaceImagesPath() {
+        return faceImagesPath;
     }
 
     public FaceData getFaceData() {

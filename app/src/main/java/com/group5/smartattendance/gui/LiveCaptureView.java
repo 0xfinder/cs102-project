@@ -70,7 +70,7 @@ public class LiveCaptureView extends JFrame {
     private boolean clicked = false;
 
     // OpenCV Stuff
-    private String saveFolder = "images";
+    // private String saveFolder = "images";
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
 
     public LiveCaptureView() {
@@ -199,6 +199,19 @@ public class LiveCaptureView extends JFrame {
         }
     }
 
+    private Student getStudentFromSID(String sid) {
+        try {
+            Optional<Student> student = StudentManager.findById(sid);
+            if (student.isPresent()) {
+                return student.get();
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // Creating a camera
     public void startCamera() {
         // Start Webcam
@@ -283,7 +296,8 @@ public class LiveCaptureView extends JFrame {
         }
 
         // Create folder if folder doesn't exist
-        Path studentFolder = Paths.get(saveFolder, sid);
+        Path studentFolder = getStudentFromSID(sid).getFaceImagesPath();
+        // Path studentFolder = Paths.get(saveFolder, sid);
         try {
             Files.createDirectories(studentFolder);
         } catch (Exception e) {

@@ -65,7 +65,7 @@ public class LiveRecognitionView extends JFrame {
     private String detectedStudent = "unknown";
 
     // OpenCV Stuff
-    private String saveFolder = "images";
+    // private String saveFolder = "images";
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
 
     private double threshold = 0.7; // if unable to hit threshold, get more traning data
@@ -308,13 +308,13 @@ public class LiveRecognitionView extends JFrame {
     }
 
     // DEPRICATED
-    private FaceData createFaceData(String studentId) {
-        // use paths for cross platform support
-        Path studentFolder = Paths.get(saveFolder, studentId);
-        FaceData fd = new FaceData(studentFolder.toString());
-        fd.setStudentID(studentId);
-        return fd;
-    }
+    // private FaceData createFaceData(String studentId) {
+    // // use paths for cross platform support
+    // Path studentFolder = Paths.get(saveFolder, studentId);
+    // FaceData fd = new FaceData(studentFolder.toString());
+    // fd.setStudentID(studentId);
+    // return fd;
+    // }
 
     private String computeBestChoice(Mat faceHist, List<FaceData> studentFaceData) {
         double highestScore = 0.0;
