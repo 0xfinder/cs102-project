@@ -222,12 +222,15 @@ public class LiveRecognitionView extends JFrame {
             String studentName = "";
 
             try {
-                studentName = StudentManager.findById(detectedStudentID).get().getName();
+                if (!detectedStudentID.equals("unknown")) {
+                    studentName = StudentManager.findById(detectedStudentID).get().getName();
+                    detectedStudent = "SID: S" + detectedStudentID + ", " + studentName;
+                } else {
+                    detectedStudent = "Unknown Student";
+                }
             } catch (Exception e) {
                 System.out.println(e);
             }
-
-            detectedStudent = "SID: S" + detectedStudentID + ", " + studentName;
 
             // Label based on best score (correlation: higher is better)
             Imgproc.putText(webcamFrame, detectedStudent, new Point(rect.x, rect.y - 10),
