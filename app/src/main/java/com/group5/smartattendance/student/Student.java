@@ -17,7 +17,7 @@ public class Student extends Entity {
     private final FaceData faceData;
 
     private final Path faceImagesPath;
-    private final String saveFolder = "images";
+    private final String saveFolder = "images"; // Get value from OptionsManager when done
 
     public Student(String id, String name, String classGroup, String email, String phone, Instant enrollmentDate) {
         super(id);

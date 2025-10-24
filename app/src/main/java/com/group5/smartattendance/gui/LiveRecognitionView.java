@@ -68,7 +68,7 @@ public class LiveRecognitionView extends JFrame {
     // private String saveFolder = "images";
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
 
-    private double threshold = 0.7; // if unable to hit threshold, get more traning data
+    private double threshold = 0.7; // Get value from OptionsManager when done
 
     private SessionManager sm = new SessionManager();
     private String selectedCourse;
@@ -350,9 +350,10 @@ public class LiveRecognitionView extends JFrame {
         }
     }
 
-    public void setThreshold(double threshold) {
-        this.threshold = threshold;
-    }
+    // DEPRECATED
+    // public void setThreshold(double threshold) {
+    // this.threshold = threshold;
+    // }
 
     // UNUSED: Main driver method
     public static void main(String[] args) {
