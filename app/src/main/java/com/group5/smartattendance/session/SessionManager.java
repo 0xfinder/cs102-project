@@ -1,5 +1,7 @@
 package com.group5.smartattendance.session;
 
+import com.group5.smartattendance.marker.AttendanceManager;
+import com.group5.smartattendance.marker.AttendanceRecord;
 import com.group5.smartattendance.persistence.DatabaseManager;
 import com.group5.smartattendance.student.Student;
 
@@ -227,6 +229,24 @@ public class SessionManager {
     }
 
     public Session closeSession(String sessionId) {
+        // for everyone in the roster that does not have a method in attendance record,
+        // set status to absent
+        long id = Long.parseLong(sessionId);
+        try (Connection connection = connectionProvider.getConnection()) {
+            Session session = findSession(connection, id)
+                    .orElseThrow(() -> new SessionManagerException("Session " + sessionId + " not found"));
+            Roster roster = session.getRoster();
+            for (Student student : roster.getStudents()) {
+                Optional<AttendanceRecord> attendanceRecord = AttendanceManager.findBySessionAndStudent(session,
+                        student);
+                if (attendanceRecord.isEmpty()) {
+                    AttendanceManager.update(AttendanceRecord.createManual(session, student,
+                            AttendanceRecord.Status.ABSENT, Instant.now(), null));
+                }
+            }
+        } catch (SQLException ex) {
+            throw new SessionManagerException("Failed to close session " + sessionId, ex);
+        }
         return setStatus(sessionId, Session.Status.CLOSED);
     }
 
@@ -335,7 +355,7 @@ public class SessionManager {
             for (Student student : roster.getStudents()) {
                 statement.setLong(1, sessionId);
                 statement.setLong(2, Long.parseLong(student.getId()));
-                statement.setString(3, "PENDING");
+                statement.setString(3, AttendanceRecord.Status.PENDING.name());
                 statement.setNull(4, Types.VARCHAR);
                 statement.setNull(5, Types.VARCHAR);
                 statement.addBatch();
@@ -386,7 +406,7 @@ public class SessionManager {
                 for (String studentId : toAdd) {
                     insertStatement.setLong(1, sessionId);
                     insertStatement.setString(2, studentId);
-                    insertStatement.setString(3, "PENDING");
+                    insertStatement.setString(3, AttendanceRecord.Status.PENDING.name());
                     insertStatement.setNull(4, Types.VARCHAR);
                     insertStatement.setNull(5, Types.VARCHAR);
                     insertStatement.addBatch();
