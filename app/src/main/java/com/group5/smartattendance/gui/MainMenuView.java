@@ -145,7 +145,6 @@ public class MainMenuView extends JFrame {
         btn03.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("SettingView");
                 new SettingView(); // open the settings window
             }
         });
@@ -153,7 +152,6 @@ public class MainMenuView extends JFrame {
         btn04.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("LiveCaptureView");
                 LiveCaptureView liveCaptureView = new LiveCaptureView(); // Launch LiveCaptureView
 
                 // Start camera in thread
@@ -169,7 +167,6 @@ public class MainMenuView extends JFrame {
         btn05.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("LiveRecognitionView");
                 LiveRecognitionView liveRecognitionView = new LiveRecognitionView(); // Launch LiveRecognitionView
 
                 // Start camera in thread

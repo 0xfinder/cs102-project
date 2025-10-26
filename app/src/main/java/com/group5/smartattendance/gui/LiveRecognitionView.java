@@ -177,7 +177,7 @@ public class LiveRecognitionView extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (selectedSessionID != null) {
                     if (sessionStarted == false) {
-                        currSession = sm.openSession(selectedSessionID);
+                        sm.openSession(selectedSessionID);
                         sessionStarted = true;
 
                         // Update UI
@@ -188,7 +188,7 @@ public class LiveRecognitionView extends JFrame {
                         lastCaptureTime = System.nanoTime();
                     } else {
                         warningBox("Close Session? (Remaining students will be marked 'Absent')");
-                        currSession = sm.closeSession(selectedSessionID);
+                        // sm.closeSession(selectedSessionID); // Disabled for now
                         sessionStarted = false;
 
                         // Update UI
