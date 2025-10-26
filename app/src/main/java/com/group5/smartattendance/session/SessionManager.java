@@ -237,8 +237,9 @@ public class SessionManager {
                     .orElseThrow(() -> new SessionManagerException("Session " + sessionId + " not found"));
             Roster roster = session.getRoster();
             for (Student student : roster.getStudents()) {
-                Optional<AttendanceRecord> attendanceRecord = AttendanceManager.findBySessionAndStudent(session,
-                        student);
+                Optional<AttendanceRecord> attendanceRecord = AttendanceManager.findBySessionAndStudentId(
+                        session.getId(),
+                        student.getId());
                 if (attendanceRecord.isEmpty()) {
                     AttendanceManager.update(AttendanceRecord.createManual(session, student,
                             AttendanceRecord.Status.ABSENT, Instant.now(), null));
