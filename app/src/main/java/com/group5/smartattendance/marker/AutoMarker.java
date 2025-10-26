@@ -74,7 +74,8 @@ public class AutoMarker implements AttendanceMarker {
 
         Instant markedAt = request.markedAt();
 
-        Optional<AttendanceRecord> existingRecord = AttendanceManager.findBySessionAndStudent(session, student);
+        Optional<AttendanceRecord> existingRecord = AttendanceManager.findBySessionAndStudentId(session.getId(),
+                student.getId());
         // check if there is an existing record (should always be present)
         if (existingRecord.isPresent()) {
             AttendanceRecord current = existingRecord.get();

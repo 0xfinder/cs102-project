@@ -22,12 +22,12 @@ public class AttendanceManager {
     private static final String SELECT_BY_SESSION_ID = "SELECT id, session_id, student_id, status, marked_at, method, confidence, notes FROM attendance_records WHERE session_id = ?";
 
     // find an attendance record by session and student
-    public static Optional<AttendanceRecord> findBySessionAndStudent(Session session, Student student)
+    public static Optional<AttendanceRecord> findBySessionAndStudentId(String sessionId, String studentId)
             throws SQLException {
         try (Connection connection = DatabaseManager.getConnection();
                 PreparedStatement statement = connection.prepareStatement(SELECT_BY_SESSION_AND_STUDENT)) {
-            statement.setLong(1, Long.parseLong(session.getId()));
-            statement.setLong(2, Long.parseLong(student.getId()));
+            statement.setLong(1, Long.parseLong(sessionId));
+            statement.setLong(2, Long.parseLong(studentId));
             try (ResultSet rs = statement.executeQuery()) {
                 if (rs.next()) {
                     return Optional.of(AttendanceRecord.map(rs));
