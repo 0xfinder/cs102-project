@@ -27,6 +27,7 @@ import java.util.Objects;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -42,6 +43,10 @@ import org.opencv.videoio.VideoCapture;
 import com.group5.smartattendance.student.FaceData;
 import com.group5.smartattendance.student.Student;
 import com.group5.smartattendance.core.CascadeLoader;
+import com.group5.smartattendance.marker.AttendanceManager;
+import com.group5.smartattendance.marker.AttendanceRecord;
+import com.group5.smartattendance.marker.AttendanceRecord.Status;
+import com.group5.smartattendance.session.Roster;
 import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.session.SessionManager;
 import com.group5.smartattendance.persistence.StudentManager;
@@ -55,6 +60,8 @@ public class LiveRecognitionView extends JFrame {
     private JLabel nameLabel;
     private JLabel confidenceLabel;
     private JButton btnBack;
+    private JLabel statusLabel;
+    private JLabel logLabel;
     private JComboBox dropdownSession;
 
     // Start camera
@@ -64,12 +71,13 @@ public class LiveRecognitionView extends JFrame {
     private Mat webcamFrame;
     private Mat gray;
 
-    private String detectedStudent = "unknown";
+    private String detectedStudent = "No Student Detected"; // or "Unknown Student"
 
     // OpenCV Stuff
     // private String saveFolder = "images";
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
-    private double currConfidenceScore = 0.0;
+    private double detectedStudentScore = 0.0;
+    private String detectedStudentID;
     private boolean currFaceDetected = false; // if a face is detected in the current frame
 
     // Bounding Box Variables
@@ -81,11 +89,21 @@ public class LiveRecognitionView extends JFrame {
     final int bbTextThickness = 2; // default from demo: 2
 
     // Misc Variables
-    private double threshold = 0.7; // Get value from OptionsManager when done
-    private int webcamIndex = 0; // Get value from OptionsManager when done
+    final double threshold = 0.7; // Get value from OptionsManager when done
+    final int webcamIndex = 0; // Get value from OptionsManager when done
 
     private SessionManager sm = new SessionManager();
-    private String selectedCourse;
+    private Session currSession;
+    private String selectedSessionID;
+    private List<FaceData> studentFaceData = new ArrayList<>();
+
+    private long lastCaptureTime = System.nanoTime(); // in nanoseconds
+    final long longMultiplier = 1000000000;
+    final long cooldownTime = 5 * longMultiplier; // Get value from OptionsManager when done
+    private boolean sessionStarted = false;
+
+    // Debug Variables
+    private long debugCooldown = cooldownTime;
 
     public LiveRecognitionView() {
         // Designing UI
@@ -100,8 +118,8 @@ public class LiveRecognitionView extends JFrame {
         add(cameraScreen);
 
         // Button Element
-        btnMarkAttendance = new JButton("Mark Attendence");
-        btnMarkAttendance.setBounds(320 - 160, 480, 160, 40);
+        btnMarkAttendance = new JButton("Start Automarker");
+        btnMarkAttendance.setBounds(320 - 240, 480, 240, 40);
         add(btnMarkAttendance);
 
         btnBack = new JButton("Back");
@@ -127,7 +145,7 @@ public class LiveRecognitionView extends JFrame {
         dropdownSession.setSelectedIndex(0);
         add(dropdownSession);
 
-        // Name Element
+        // Label Elements
         nameLabel = new JLabel("Detected Student: " + detectedStudent);
         nameLabel.setBounds(640 - 280, 520, 240, 40);
         add(nameLabel);
@@ -136,12 +154,53 @@ public class LiveRecognitionView extends JFrame {
         confidenceLabel.setBounds(640 - 280, 560, 240, 40);
         add(confidenceLabel);
 
+        statusLabel = new JLabel("Marker status: Idle");
+        statusLabel.setBounds(320 - 240, 520, 240, 40);
+        add(statusLabel);
+
+        logLabel = new JLabel("");
+        logLabel.setBounds(320 - 240, 560, 280, 40);
+        add(logLabel);
+
         // Button Event Listener
+        buttonEvents();
+
+        setSize(new Dimension(640, 640));
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setVisible(true);
+    }
+
+    private void buttonEvents() {
         btnMarkAttendance.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if (selectedSessionID != null) {
+                    if (sessionStarted == false) {
+                        currSession = sm.openSession(selectedSessionID);
+                        sessionStarted = true;
 
-                markAttendance();
+                        // Update UI
+                        statusLabel.setText("Marker status: Running");
+                        btnMarkAttendance.setText("Stop Automarker");
+
+                        // Init capture Time
+                        lastCaptureTime = System.nanoTime();
+                    } else {
+                        warningBox("Close Session? (Remaining students will be marked 'Absent')");
+                        currSession = sm.closeSession(selectedSessionID);
+                        sessionStarted = false;
+
+                        // Update UI
+                        statusLabel.setText("Marker status: Idle");
+                        btnMarkAttendance.setText("Start Automarker");
+
+                        // Clear capture time
+                        lastCaptureTime = 0;
+                    }
+                } else {
+                    new AlertBoxView("Please select a session", "Error Starting Auto Marker");
+                }
             }
         });
 
@@ -157,15 +216,15 @@ public class LiveRecognitionView extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
 
-                selectedCourse = ((String) dropdownSession.getSelectedItem()).split(" - ")[0].substring(1);
-                System.out.println(selectedCourse);
+                selectedSessionID = ((String) dropdownSession.getSelectedItem()).split(" - ")[0].substring(1);
+                studentFaceData = getFaceData(); // get face data from session id
+                if (studentFaceData.size() == 0) {
+                    warningBox(
+                            "No student face data found. Please ensure session roster is not empty, and that students have captured face data.");
+                }
+                System.out.println(selectedSessionID);
             }
         });
-
-        setSize(new Dimension(640, 640));
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setVisible(true);
     }
 
     // Creating a camera
@@ -173,7 +232,8 @@ public class LiveRecognitionView extends JFrame {
         // Start Webcam
         capture = new VideoCapture(webcamIndex);
         if (!capture.isOpened()) {
-            System.out.println("Error opening webcam!");
+            // System.out.println("Error opening webcam!");
+            new AlertBoxView("Error opening webcam!", "Error opening webcam!");
             return;
         }
         webcamFrame = new Mat();
@@ -188,7 +248,25 @@ public class LiveRecognitionView extends JFrame {
                 break;
             }
 
+            // Detect face and update frame buffer
             detectFace();
+
+            // Mark Attendance Logic
+            if (System.nanoTime() >= lastCaptureTime + cooldownTime && sessionStarted) {
+                if (detectedStudent.equals("No Student Detected") || detectedStudent.equals("Unknown Student")) {
+                    logLabel.setText(detectedStudent);
+                } else if (detectedStudentScore >= threshold) {
+                    markAttendance(); // Mark Attendance normally;
+                } else {
+                    // Pause code and ask for confirmation box
+                    warningBox(String.format("Mark Attendence for %s? (Confidence: %.1f", detectedStudent,
+                            detectedStudentScore * 100) + "%)");
+                    markAttendance(); // Mark Attendance normally;
+                }
+                lastCaptureTime = System.nanoTime();
+            } else {
+                // Do nothing
+            }
 
             // convert matrix to byte
             final MatOfByte buf = new MatOfByte();
@@ -231,16 +309,12 @@ public class LiveRecognitionView extends JFrame {
             Imgproc.resize(face, face, new Size(200, 200));
             Mat faceHist = computeHistogram(face);
 
-            // Get FaceData of all students in the dataset
-            List<FaceData> studentFaceData = getFaceData();
-
             // Compare with training histograms and get data
             HistogramData hd = computeBestChoice(faceHist, studentFaceData);
-            String detectedStudentID = hd.getHighestScoreID();
-            double detectedStudentScore = hd.getHighestScore();
+            detectedStudentID = hd.getHighestScoreID();
+            detectedStudentScore = hd.getHighestScore();
 
             // Update current score
-            currConfidenceScore = detectedStudentScore;
             LabelScore = String.format("%.1f", detectedStudentScore * 100);
 
             // Prepare data for label
@@ -288,9 +362,9 @@ public class LiveRecognitionView extends JFrame {
         label.repaint();
     }
 
+    // Compute histogram for a single image
     private static Mat computeHistogram(Mat image) {
         // from faceRecognitionDemo.java
-        // Compute histogram for a single image
         Mat hist = new Mat();
         MatOfInt histSize = new MatOfInt(256);
         MatOfFloat ranges = new MatOfFloat(0f, 256f);
@@ -300,9 +374,9 @@ public class LiveRecognitionView extends JFrame {
         return hist;
     }
 
+    // Convert Mat to BufferedImage for display
     private static BufferedImage matToBufferedImage(Mat mat) {
         // from faceRecognitionDemo.java
-        // Convert Mat to BufferedImage for display
         int width = mat.cols();
         int height = mat.rows();
         int type = BufferedImage.TYPE_BYTE_GRAY;
@@ -321,7 +395,7 @@ public class LiveRecognitionView extends JFrame {
         return image;
     }
 
-    // To replace once FaceData class has been integrated into Student class
+    // To update with only students from a given session roster, not all students
     private List<FaceData> getFaceData() {
         List<FaceData> studentFaceData = new ArrayList<>();
 
@@ -341,25 +415,20 @@ public class LiveRecognitionView extends JFrame {
         // }
 
         try {
-            List<Student> studentList = StudentManager.findAll();
-            for (Student student : studentList) {
-                studentFaceData.add(student.getFaceData());
+            if (selectedSessionID != null) {
+                Roster roster = sm.loadRoster(selectedSessionID);
+                List<Student> studentList = roster.getStudents();
+                // List<Student> studentList = StudentManager.findAll();
+                for (Student student : studentList) {
+                    studentFaceData.add(student.getFaceData());
+                }
             }
         } catch (Exception e) {
-            System.out.println(e);
+            System.out.println("LiveRecognitionView.getFaceData()" + e);
         }
         return studentFaceData;
 
     }
-
-    // DEPRICATED
-    // private FaceData createFaceData(String studentId) {
-    // // use paths for cross platform support
-    // Path studentFolder = Paths.get(saveFolder, studentId);
-    // FaceData fd = new FaceData(studentFolder.toString());
-    // fd.setStudentID(studentId);
-    // return fd;
-    // }
 
     private HistogramData computeBestChoice(Mat faceHist, List<FaceData> studentFaceData) {
         // double highestScore = 0.0;
@@ -370,7 +439,9 @@ public class LiveRecognitionView extends JFrame {
             double currScore = studentFD.getBestHistogramScore(faceHist);
             // debug
             // System.out.println(studentFD.getStudentName() + " " + currScore);
-            if (currScore > threshold && currScore > hd.getHighestScore()) { // threshold data
+            // if (currScore > threshold && currScore > hd.getHighestScore()) { // threshold
+            // data
+            if (currScore > hd.getHighestScore()) { // threshold data
                 hd.setHighestScore(currScore);
                 hd.setHighestScoreID(studentFD.getStudentID());
             }
@@ -382,24 +453,39 @@ public class LiveRecognitionView extends JFrame {
     // To Update when AttendanceManager is done
     private void markAttendance() {
         if (detectedStudent.equals("No Student Detected")) {
-            new AlertBoxView("No Face Detected!", "Error Marking Attendance");
-        } else if (selectedCourse == null) {
-            new AlertBoxView("No Session Selected!", "Error Marking Attendance");
+            logLabel.setText("No Face Detected!");
+            // } else if (selectedSessionID == null) {
+            // logLabel.setText("No Session Selected!");
+            // new AlertBoxView("No Session Selected!", "Error Marking Attendance");
         } else {
-            new AlertBoxView(
-                    String.format("Attendence Marked for %s in session ID %s.",
-                            detectedStudent,
-                            selectedCourse),
-                    "Attendance Marked Succesfully");
+            AttendanceRecord attendanceRecord = null;
+            try {
+                attendanceRecord = AttendanceManager.findBySessionAndStudentId(selectedSessionID, detectedStudentID)
+                        .get();
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+
+            String status = attendanceRecord.getStatus().name();
+            System.out.println(status);
 
             // AttendanceManager here
+            // get attendance status
+            // if (pending && is late) {mark late}
+            // else if (pending) {mark present}
+            // else if (preset) {"student alr present" message}
+            //
+
+            logLabel.setText(
+                    String.format("Attendence Marked for %s",
+                            detectedStudent));
+
         }
     }
 
-    // DEPRECATED
-    // public void setThreshold(double threshold) {
-    // this.threshold = threshold;
-    // }
+    private void warningBox(String msg) {
+        JOptionPane.showMessageDialog(this, msg);
+    }
 
     // UNUSED: Main driver method
     public static void main(String[] args) {

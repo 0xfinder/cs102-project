@@ -218,7 +218,8 @@ public class LiveCaptureView extends JFrame {
         // Start Webcam
         capture = new VideoCapture(webcamIndex);
         if (!capture.isOpened()) {
-            System.out.println("Error opening webcam!");
+            // System.out.println("Error opening webcam!");
+            new AlertBoxView("Error opening webcam!", "Error opening webcam!");
             return;
         }
         webcamFrame = new Mat();
