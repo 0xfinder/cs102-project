@@ -45,6 +45,7 @@ import com.group5.smartattendance.core.CascadeLoader;
 import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.session.SessionManager;
 import com.group5.smartattendance.persistence.StudentManager;
+import com.group5.smartattendance.student.HistogramData;
 
 // Class - Swing Class
 public class LiveRecognitionView extends JFrame {
@@ -52,6 +53,7 @@ public class LiveRecognitionView extends JFrame {
     private JLabel cameraScreen;
     private JButton btnMarkAttendance;
     private JLabel nameLabel;
+    private JLabel confidenceLabel;
     private JButton btnBack;
     private JComboBox dropdownSession;
 
@@ -67,7 +69,18 @@ public class LiveRecognitionView extends JFrame {
     // OpenCV Stuff
     // private String saveFolder = "images";
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
+    private double currConfidenceScore = 0.0;
+    private boolean currFaceDetected = false; // if a face is detected in the current frame
 
+    // Bounding Box Variables
+    // NOTE: Java Colors are in BGR
+    final Scalar bbColorSuccess = new Scalar(69, 167, 40);
+    final Scalar bbColorWarning = new Scalar(7, 193, 255);
+    final Scalar bbColorDanger = new Scalar(69, 53, 220);
+    final double bbTextSize = 0.75; // default from demo: 0.9
+    final int bbTextThickness = 2; // default from demo: 2
+
+    // Misc Variables
     private double threshold = 0.7; // Get value from OptionsManager when done
     private int webcamIndex = 0; // Get value from OptionsManager when done
 
@@ -119,6 +132,10 @@ public class LiveRecognitionView extends JFrame {
         nameLabel.setBounds(640 - 280, 520, 240, 40);
         add(nameLabel);
 
+        confidenceLabel = new JLabel("Confidence: -");
+        confidenceLabel.setBounds(640 - 280, 560, 240, 40);
+        add(confidenceLabel);
+
         // Button Event Listener
         btnMarkAttendance.addActionListener(new ActionListener() {
             @Override
@@ -163,7 +180,7 @@ public class LiveRecognitionView extends JFrame {
         byte[] imageData;
 
         ImageIcon icon;
-        while (true) {
+        while (true) { // Program loop
             // read image to matrix
             // capture.read(frame);
             if (!capture.read(webcamFrame)) {
@@ -171,7 +188,7 @@ public class LiveRecognitionView extends JFrame {
                 break;
             }
 
-            detectAndClassifyFace();
+            detectFace();
 
             // convert matrix to byte
             final MatOfByte buf = new MatOfByte();
@@ -185,7 +202,7 @@ public class LiveRecognitionView extends JFrame {
         capture.release();
     }
 
-    private void detectAndClassifyFace() {
+    private void detectFace() {
         // from FaceRecognitionDemo.java
         gray = new Mat();
 
@@ -203,11 +220,11 @@ public class LiveRecognitionView extends JFrame {
 
         // init detectedName to "No Student Detected" if no faces are detected
         detectedStudent = "No Student Detected";
+        String LabelScore = "--.-";
+        currFaceDetected = false;
         for (Rect rect : faces.toArray()) {
-            // Draw rectangle
-            Imgproc.rectangle(webcamFrame, new Point(rect.x, rect.y),
-                    new Point(rect.x + rect.width, rect.y + rect.height),
-                    new Scalar(0, 255, 0), 2);
+            // Update currFaceDeteced
+            currFaceDetected = true;
 
             // Crop and resize face
             Mat face = gray.submat(rect);
@@ -217,29 +234,53 @@ public class LiveRecognitionView extends JFrame {
             // Get FaceData of all students in the dataset
             List<FaceData> studentFaceData = getFaceData();
 
-            // Compare with training histograms
-            String detectedStudentID = computeBestChoice(faceHist, studentFaceData);
+            // Compare with training histograms and get data
+            HistogramData hd = computeBestChoice(faceHist, studentFaceData);
+            String detectedStudentID = hd.getHighestScoreID();
+            double detectedStudentScore = hd.getHighestScore();
+
+            // Update current score
+            currConfidenceScore = detectedStudentScore;
+            LabelScore = String.format("%.1f", detectedStudentScore * 100);
+
+            // Prepare data for label
+            String formatScore = String.format("%.1f", detectedStudentScore * 100);
             String studentName = "";
+            String bbLabelText = "";
 
             try {
-                if (!detectedStudentID.equals("unknown")) {
+                if (!detectedStudentID.equals("unknown")) { // if face belongs to a student
                     studentName = StudentManager.findById(detectedStudentID).get().getName();
                     detectedStudent = "SID: S" + detectedStudentID + ", " + studentName;
+                    bbLabelText = "SID: S" + detectedStudentID + ", " + studentName + " [" + formatScore + "%]";
                 } else {
-                    detectedStudent = "Unknown Student";
+                    detectedStudent = "Unknown Student"; // To be displayed in the Label UI
+                    bbLabelText = "Unknown Student"; // To be displayed above the BB
                 }
             } catch (Exception e) {
                 System.out.println(e);
             }
 
-            // Label based on best score (correlation: higher is better)
-            Imgproc.putText(webcamFrame, detectedStudent, new Point(rect.x, rect.y - 10),
-                    Imgproc.FONT_HERSHEY_SIMPLEX, 0.9, new Scalar(0, 255, 0), 2);
+            // Set bounding box color based on best score (correlation: higher is better)
+            Scalar bbColor = bbColorWarning; // Bounding Box color defaults to warning color, success is too dark;
+            if (detectedStudentScore < threshold) {
+                bbColor = bbColorDanger;
+            }
+            // Draw rectangle
+            Imgproc.rectangle(webcamFrame, new Point(rect.x, rect.y),
+                    new Point(rect.x + rect.width, rect.y + rect.height),
+                    bbColor, 2);
+
+            // Draw Text
+            Imgproc.putText(webcamFrame, bbLabelText, new Point(rect.x, rect.y - 10),
+                    Imgproc.FONT_HERSHEY_SIMPLEX, bbTextSize, bbColor, bbTextThickness); // Font Family, ???, RGB Color,
+                                                                                         // ???
 
         }
 
         // Update (other) label text
         nameLabel.setText("Detected Student: " + detectedStudent);
+        confidenceLabel.setText("Confidence: " + LabelScore + "%");
 
         // Display frame
         BufferedImage image = matToBufferedImage(webcamFrame);
@@ -320,21 +361,22 @@ public class LiveRecognitionView extends JFrame {
     // return fd;
     // }
 
-    private String computeBestChoice(Mat faceHist, List<FaceData> studentFaceData) {
-        double highestScore = 0.0;
-        String highestScoreID = "unknown";
+    private HistogramData computeBestChoice(Mat faceHist, List<FaceData> studentFaceData) {
+        // double highestScore = 0.0;
+        // String highestScoreID = "unknown";
+        HistogramData hd = new HistogramData();
 
         for (FaceData studentFD : studentFaceData) {
             double currScore = studentFD.getBestHistogramScore(faceHist);
             // debug
             // System.out.println(studentFD.getStudentName() + " " + currScore);
-            if (currScore > threshold && currScore > highestScore) { // threshold data
-                highestScore = currScore;
-                highestScoreID = studentFD.getStudentID();
+            if (currScore > threshold && currScore > hd.getHighestScore()) { // threshold data
+                hd.setHighestScore(currScore);
+                hd.setHighestScoreID(studentFD.getStudentID());
             }
         }
 
-        return highestScoreID;
+        return hd;
     }
 
     // To Update when AttendanceManager is done

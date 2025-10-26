@@ -225,7 +225,7 @@ public class LiveCaptureView extends JFrame {
         byte[] imageData;
 
         ImageIcon icon;
-        while (isVisible() && capture.read(webcamFrame)) {
+        while (isVisible() && capture.read(webcamFrame)) { // program loop
             // read image to matrix
             // capture.read(frame);
             if (!capture.read(webcamFrame)) {
