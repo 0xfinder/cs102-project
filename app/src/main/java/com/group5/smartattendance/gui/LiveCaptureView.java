@@ -87,12 +87,12 @@ public class LiveCaptureView extends JFrame {
         add(cameraScreen);
 
         // Button Element
-        btnCapture = new JButton("capture");
-        btnCapture.setBounds(160, 480, 80, 40);
+        btnCapture = new JButton("Capture Photo");
+        btnCapture.setBounds(320 - 240, 480, 240, 40);
         add(btnCapture);
 
         btnBack = new JButton("Back");
-        btnBack.setBounds(0, 480, 80, 40);
+        btnBack.setBounds(0, 560, 80, 40);
         add(btnBack);
 
         // Is New Student Checkbox

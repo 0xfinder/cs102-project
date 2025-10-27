@@ -123,7 +123,7 @@ public class LiveRecognitionView extends JFrame {
         add(btnMarkAttendance);
 
         btnBack = new JButton("Back");
-        btnBack.setBounds(0, 480, 80, 40);
+        btnBack.setBounds(0, 560, 80, 40);
         add(btnBack);
 
         // Get Sessions
