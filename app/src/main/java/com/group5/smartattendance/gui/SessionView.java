@@ -14,12 +14,15 @@ import java.util.List;
 import java.util.*;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.time.Instant;
 
 import com.group5.smartattendance.persistence.StudentManager;
 import com.group5.smartattendance.session.Roster;
 import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.session.SessionManager;
 import com.group5.smartattendance.student.Student;
+import com.group5.smartattendance.marker.AttendanceManager;
+import com.group5.smartattendance.marker.AttendanceRecord;
 
 public class SessionView extends JFrame {
 
@@ -138,7 +141,7 @@ public class SessionView extends JFrame {
         try {
             Roster roster = sessionManager.loadRoster(session.getId());
             List<Object[]> rosterRows = toRosterRows(roster);
-            new SessionDetailDialog(this, session, rosterRows);
+            new SessionDetailDialog(this, session, rosterRows, this::loadSessions);
         } catch (SessionManager.SessionManagerException ex) {
             JOptionPane.showMessageDialog(this, "Failed to load roster: " + ex.getMessage(),
                     "Session Error", JOptionPane.ERROR_MESSAGE);
@@ -369,27 +372,15 @@ public class SessionView extends JFrame {
         private JButton btnSaveChanges, btnCloseSession;
         private final List<String> lateAlerts = new ArrayList<>();
 
-        public SessionDetailDialog(JFrame parent, Session session, List<Object[]> rosterData) {
+        public SessionDetailDialog(JFrame parent, Session session, List<Object[]> rosterData, Runnable onUpdate) {
             super(parent, "Session Detail - " + session.getCourseName(), true);
             this.session = session;
             setLayout(null);
 
-            List<Student> allStudents = new ArrayList<>();
-            try {
-                allStudents = StudentManager.findAll();
-            } catch (SQLException e) {
-                JOptionPane.showMessageDialog(this,
-                        "Error loading student data: " + e.getMessage(),
-                        "Database Error", JOptionPane.ERROR_MESSAGE);
-                e.printStackTrace();
-                dispose();
-                return;
-            }
-
-            List<Object[]> tableRows = buildAttendanceTableRows(allStudents, rosterData);
-            final int window_w = 700;
+            final int window_w = 1000;
             final int window_h = 500;
 
+            // === Header ===
             lblHeader = new JLabel(
                     "Session: " + session.getCourseName() + " - " + session.getSessionDate(),
                     SwingConstants.CENTER);
@@ -397,22 +388,60 @@ public class SessionView extends JFrame {
             lblHeader.setBounds(0, 10, window_w, 25);
             add(lblHeader);
 
-            String[] columns = { "Included", "ID", "Name", "Status", "Timestamp", "Method" };
+            // === Editable session info fields ===
+            JLabel lblCourseName = new JLabel("Course:");
+            JTextField txtCourseName = new JTextField(session.getCourseName(), 15);
 
+            JLabel lblDate = new JLabel("Date (YYYY-MM-DD):");
+            JTextField txtDate = new JTextField(session.getSessionDate().toString(), 10);
+
+            JLabel lblStart = new JLabel("Start Time (HH:MM):");
+            JTextField txtStart = new JTextField(session.getStartTime().toString(), 8);
+
+            JLabel lblEnd = new JLabel("End Time (HH:MM):");
+            JTextField txtEnd = new JTextField(session.getEndTime().toString(), 8);
+
+            JLabel lblLocation = new JLabel("Location:");
+            JTextField txtLocation = new JTextField(session.getLocation().orElse(""), 15);
+
+            JPanel detailsPanel = new JPanel(new GridLayout(2, 5, 5, 5));
+            detailsPanel.add(lblCourseName);
+            detailsPanel.add(txtCourseName);
+            detailsPanel.add(lblDate);
+            detailsPanel.add(txtDate);
+            detailsPanel.add(lblLocation);
+            detailsPanel.add(txtLocation);
+            detailsPanel.add(lblStart);
+            detailsPanel.add(txtStart);
+            detailsPanel.add(lblEnd);
+            detailsPanel.add(txtEnd);
+            detailsPanel.add(new JLabel(""));
+
+            detailsPanel.setBounds(20, 40, window_w - 40, 60);
+            add(detailsPanel);
+
+            // === Attendance table ===
+            List<Student> allStudents;
+            List<Object[]> tableRows;
+            try {
+                allStudents = StudentManager.findAll();
+                List<AttendanceRecord> records = AttendanceManager.findBySession(session);
+                tableRows = buildAttendanceTableRows(allStudents, records);
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Failed to load attendance data: " + ex.getMessage(),
+                        "Database Error", JOptionPane.ERROR_MESSAGE);
+                tableRows = new ArrayList<>();
+            }
+
+            String[] columns = { "Included", "ID", "Name", "Status", "Timestamp", "Method" };
             attendanceModel = new DefaultTableModel(tableRows.toArray(new Object[0][]), columns) {
                 @Override
                 public boolean isCellEditable(int row, int col) {
-                    // Always allow editing the "Included" checkbox
                     if (col == 0)
-                        return true;
-
-                    // Only allow editing of other fields if "Included" is checked
+                        return true; // checkbox
                     Boolean included = (Boolean) getValueAt(row, 0);
-                    if (included != null && included) {
-                        return col == 3 || col == 4 || col == 5; // Status, Timestamp, Method
-                    }
-
-                    return false;
+                    return included != null && included && (col == 3);
                 }
 
                 @Override
@@ -422,69 +451,151 @@ public class SessionView extends JFrame {
             };
 
             attendanceTable = new JTable(attendanceModel);
-
-            String[] statusOptions = { "Pending", "Present", "Absent", "Late" };
             TableColumn statusColumn = attendanceTable.getColumnModel().getColumn(3);
-            statusColumn.setCellEditor(new DefaultCellEditor(new JComboBox<>(statusOptions)));
-
-            String[] methodOptions = { "Auto", "Manual" };
-            TableColumn methodColumn = attendanceTable.getColumnModel().getColumn(5);
-            methodColumn.setCellEditor(new DefaultCellEditor(new JComboBox<>(methodOptions)));
+            statusColumn.setCellEditor(new DefaultCellEditor(new JComboBox<>(
+                    new String[] { "PENDING", "PRESENT", "ABSENT", "LATE" })));
 
             JScrollPane scrollPane = new JScrollPane(attendanceTable);
-            scrollPane.setBounds(20, 50, window_w - 40, 300);
+            scrollPane.setBounds(20, 110, window_w - 40, 250);
             add(scrollPane);
 
             lblCounters = new JLabel("", SwingConstants.LEFT);
             lblCounters.setFont(new Font("Dialog", Font.PLAIN, 14));
-            lblCounters.setBounds(20, 360, window_w - 40, 25);
+            lblCounters.setBounds(20, 370, window_w - 40, 25);
             add(lblCounters);
 
+            // === Buttons ===
             btnSaveChanges = new JButton("Save Changes");
-            btnSaveChanges.setBounds(150, 400, 180, 30);
+            btnSaveChanges.setBounds(250, 410, 180, 30);
             btnSaveChanges.addActionListener(e -> {
-                saveManualChanges();
-                updateCountersAndAlerts();
+                try {
+                    String courseName = txtCourseName.getText().trim();
+                    LocalDate date = LocalDate.parse(txtDate.getText().trim());
+                    LocalTime start = LocalTime.parse(txtStart.getText().trim());
+                    LocalTime end = LocalTime.parse(txtEnd.getText().trim());
+                    String location = txtLocation.getText().trim();
+
+                    if (courseName.isEmpty()) {
+                        JOptionPane.showMessageDialog(this, "Course name cannot be empty.");
+                        return;
+                    }
+                    if (start.isAfter(end)) {
+                        JOptionPane.showMessageDialog(this, "Start time must be before end time.");
+                        return;
+                    }
+
+                    // ✅ Create an updated copy — same ID, roster, and status
+                    Session updatedSession = new Session(
+                            session.getId(),
+                            courseName,
+                            date,
+                            start,
+                            end,
+                            location.isEmpty() ? null : location,
+                            session.getStatus(),
+                            session.getRoster());
+
+                    // ✅ Persist to DB
+                    SessionManager sm = new SessionManager();
+                    sm.updateSession(updatedSession);
+
+                    // ✅ Save attendance and refresh counters
+                    saveManualChanges();
+                    updateCountersAndAlerts();
+                    lblHeader.setText("Session: " + courseName + " - " + date);
+                    // JOptionPane.showMessageDialog(this, "Session updated successfully.");
+
+                    if (onUpdate != null) {
+                        onUpdate.run();
+                    }
+
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this,
+                            "Failed to save changes: " + ex.getMessage(),
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
             });
             add(btnSaveChanges);
 
             btnCloseSession = new JButton("Back");
-            btnCloseSession.setBounds(360, 400, 150, 30);
+            btnCloseSession.setBounds(560, 410, 150, 30);
             btnCloseSession.addActionListener(e -> dispose());
             add(btnCloseSession);
 
             setSize(window_w, window_h);
             setLocationRelativeTo(parent);
             updateCountersAndAlerts();
+
             setVisible(true);
         }
 
         private void saveManualChanges() {
-            List<Student> selectedStudents = new ArrayList<>();
-
-            for (int i = 0; i < attendanceModel.getRowCount(); i++) {
-                Boolean included = (Boolean) attendanceModel.getValueAt(i, 0);
-                if (included != null && included) {
-                    String studentId = (String) attendanceModel.getValueAt(i, 1);
-
-                    try {
-                        Optional<Student> optionalStudent = StudentManager.findById(studentId);
-                        optionalStudent.ifPresent(selectedStudents::add);
-                    } catch (SQLException ex) {
-                        JOptionPane.showMessageDialog(this,
-                                "Failed to find student with ID " + studentId + ": " + ex.getMessage(),
-                                "Database Error", JOptionPane.ERROR_MESSAGE);
+            try {
+                // 1) Collect included students from the checkbox column
+                List<Student> includedStudents = new ArrayList<>();
+                for (int i = 0; i < attendanceModel.getRowCount(); i++) {
+                    Boolean included = (Boolean) attendanceModel.getValueAt(i, 0);
+                    if (included != null && included) {
+                        String studentId = (String) attendanceModel.getValueAt(i, 1);
+                        StudentManager.findById(studentId).ifPresent(includedStudents::add);
                     }
                 }
-            }
 
-            try {
+                // 2) Persist roster inclusion/exclusion
                 SessionManager sessionManager = new SessionManager();
-                sessionManager.updateRoster(this.session.getId(), selectedStudents);
-                JOptionPane.showMessageDialog(this, "Roster saved successfully.");
-            } catch (SessionManager.SessionManagerException ex) {
-                JOptionPane.showMessageDialog(this, "Failed to save roster: " + ex.getMessage(),
-                        "Save Error", JOptionPane.ERROR_MESSAGE);
+                sessionManager.updateRoster(session.getId(), includedStudents);
+
+                // 3) Update attendance records only if status changed
+                for (int i = 0; i < attendanceModel.getRowCount(); i++) {
+                    Boolean included = (Boolean) attendanceModel.getValueAt(i, 0);
+                    if (included == null || !included)
+                        continue;
+
+                    String studentId = (String) attendanceModel.getValueAt(i, 1);
+                    String statusStr = (String) attendanceModel.getValueAt(i, 3);
+
+                    AttendanceRecord.Status newStatus;
+                    try {
+                        newStatus = AttendanceRecord.Status.valueOf(statusStr.toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        newStatus = AttendanceRecord.Status.PENDING;
+                    }
+
+                    Optional<AttendanceRecord> existingOpt = AttendanceManager
+                            .findBySessionAndStudentId(session.getId(), studentId);
+
+                    if (existingOpt.isPresent()) {
+                        AttendanceRecord current = existingOpt.get();
+                        AttendanceRecord.Status oldStatus = current.getStatus();
+
+                        // Only write and touch timestamp when the status actually changes
+                        if (!oldStatus.equals(newStatus)) {
+                            AttendanceRecord updated = current.setManual(
+                                    newStatus,
+                                    Instant.now(), // only set a new timestamp if status changed
+                                    current.getNotes().orElse(null));
+                            AttendanceManager.update(updated);
+                        }
+                    }
+
+                }
+
+                // 4) Refresh table with latest records
+                List<Student> allStudents = StudentManager.findAll();
+                List<AttendanceRecord> updatedRecords = AttendanceManager.findBySession(session);
+                attendanceModel.setRowCount(0);
+                for (Object[] row : buildAttendanceTableRows(allStudents, updatedRecords)) {
+                    attendanceModel.addRow(row);
+                }
+
+                updateCountersAndAlerts();
+                JOptionPane.showMessageDialog(this, "Changes saved successfully.");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Failed to save attendance: " + ex.getMessage(),
+                        "Save Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
 
@@ -515,28 +626,38 @@ public class SessionView extends JFrame {
             lblCounters.setText(sb.toString());
         }
 
-        private List<Object[]> buildAttendanceTableRows(List<Student> allStudents, List<Object[]> rosterData) {
-            Set<String> rosterIds = rosterData.stream()
-                    .map(row -> (String) row[0])
-                    .collect(Collectors.toSet());
+        private List<Object[]> buildAttendanceTableRows(List<Student> allStudents, List<AttendanceRecord> records) {
+            Map<String, AttendanceRecord> recordMap = new HashMap<>();
+            for (AttendanceRecord record : records) {
+                recordMap.put(record.getStudent().getId(), record);
+            }
 
             List<Object[]> allRows = new ArrayList<>();
 
             for (Student student : allStudents) {
-                boolean included = rosterIds.contains(student.getId());
+                AttendanceRecord record = recordMap.get(student.getId());
 
-                Object[] existingData = rosterData.stream()
-                        .filter(row -> student.getId().equals(row[0]))
-                        .findFirst()
-                        .orElse(null);
+                boolean included = (record != null);
+                String status = (record != null) ? record.getStatus().name() : "-";
+                String timestamp = "";
+                if (record != null && record.getMarkedAt().isPresent()) {
+                    Instant instant = record.getMarkedAt().get();
+                    java.time.ZonedDateTime localTime = instant.atZone(java.time.ZoneId.systemDefault());
+                    java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter
+                            .ofPattern("dd MMM yyyy, hh:mm a");
+                    timestamp = localTime.format(formatter);
+                }
+                String method = (record != null && record.getMethod().isPresent())
+                        ? record.getMethod().get().name()
+                        : "-";
 
                 allRows.add(new Object[] {
                         included,
                         student.getId(),
                         student.getName(),
-                        existingData != null ? existingData[2] : "Pending",
-                        existingData != null ? existingData[3] : "-",
-                        existingData != null ? existingData[4] : "-"
+                        status,
+                        timestamp,
+                        method
                 });
             }
 
