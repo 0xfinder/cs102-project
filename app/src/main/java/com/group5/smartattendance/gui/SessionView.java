@@ -610,11 +610,18 @@ public class SessionView extends JFrame {
         }
 
         private void updateCountersAndAlerts() {
-            int total = attendanceModel.getRowCount();
+            int total = 0; // count only included students
             int present = 0, late = 0;
             lateAlerts.clear();
 
-            for (int i = 0; i < total; i++) {
+            for (int i = 0; i < attendanceModel.getRowCount(); i++) {
+                Boolean included = (Boolean) attendanceModel.getValueAt(i, 0);
+                if (included == null || !included) {
+                    continue; // skip students not included
+                }
+
+                total++; // only count included students
+
                 String name = (String) attendanceModel.getValueAt(i, 2);
                 String status = ((String) attendanceModel.getValueAt(i, 3)).toLowerCase();
 
