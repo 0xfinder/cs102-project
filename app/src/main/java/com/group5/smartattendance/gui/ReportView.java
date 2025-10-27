@@ -138,9 +138,14 @@ public class ReportView extends JFrame {
 
             // Summary table
             int total = allStudents.size();
-            long present = records.stream().filter(r -> r.getStatus() == AttendanceRecord.Status.PRESENT).count();
-            long late = records.stream().filter(r -> r.getStatus() == AttendanceRecord.Status.LATE).count();
-            long absent = total - present - late;
+            long present = records.stream()
+                    .filter(r -> r.getStatus() == AttendanceRecord.Status.PRESENT
+                            || r.getStatus() == AttendanceRecord.Status.LATE)
+                    .count();
+            long late = records.stream()
+                    .filter(r -> r.getStatus() == AttendanceRecord.Status.LATE)
+                    .count();
+            long absent = total - present;
             String presentPct = total > 0 ? String.format("%.1f%%", present * 100.0 / total) : "-";
 
             DefaultTableModel summaryModel = new DefaultTableModel(0, 2) {

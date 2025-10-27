@@ -434,14 +434,14 @@ public class SessionView extends JFrame {
                 tableRows = new ArrayList<>();
             }
 
-            String[] columns = { "Included", "ID", "Name", "Status", "Timestamp", "Method" };
+            String[] columns = { "Included", "ID", "Name", "Status", "Timestamp", "Method", "Notes" };
             attendanceModel = new DefaultTableModel(tableRows.toArray(new Object[0][]), columns) {
                 @Override
                 public boolean isCellEditable(int row, int col) {
                     if (col == 0)
                         return true; // checkbox
                     Boolean included = (Boolean) getValueAt(row, 0);
-                    return included != null && included && (col == 3);
+                    return included != null && included && (col == 3 || col == 6);
                 }
 
                 @Override
@@ -530,6 +530,9 @@ public class SessionView extends JFrame {
         }
 
         private void saveManualChanges() {
+            if (attendanceTable.isEditing()) {
+                attendanceTable.getCellEditor().stopCellEditing();
+            }
             try {
                 // 1) Collect included students from the checkbox column
                 List<Student> includedStudents = new ArrayList<>();
@@ -553,6 +556,7 @@ public class SessionView extends JFrame {
 
                     String studentId = (String) attendanceModel.getValueAt(i, 1);
                     String statusStr = (String) attendanceModel.getValueAt(i, 3);
+                    String notesStr = (String) attendanceModel.getValueAt(i, 6);
 
                     AttendanceRecord.Status newStatus;
                     try {
@@ -569,11 +573,17 @@ public class SessionView extends JFrame {
                         AttendanceRecord.Status oldStatus = current.getStatus();
 
                         // Only write and touch timestamp when the status actually changes
-                        if (!oldStatus.equals(newStatus)) {
+                        boolean statusChanged = !oldStatus.equals(newStatus);
+                        boolean notesChanged = !Objects.equals(current.getNotes().orElse(""), notesStr);
+
+                        if (statusChanged || notesChanged) {
                             AttendanceRecord updated = current.setManual(
                                     newStatus,
-                                    Instant.now(), // only set a new timestamp if status changed
-                                    current.getNotes().orElse(null));
+                                    statusChanged ? Instant.now() : current.getMarkedAt().orElse(null), // only update
+                                                                                                        // timestamp if
+                                                                                                        // status
+                                                                                                        // changed
+                                    notesStr);
                             AttendanceManager.update(updated);
                         }
                     }
@@ -639,6 +649,7 @@ public class SessionView extends JFrame {
 
                 boolean included = (record != null);
                 String status = (record != null) ? record.getStatus().name() : "-";
+                String notes = (record != null && record.getNotes().isPresent()) ? record.getNotes().get() : "";
                 String timestamp = "";
                 if (record != null && record.getMarkedAt().isPresent()) {
                     Instant instant = record.getMarkedAt().get();
@@ -657,7 +668,8 @@ public class SessionView extends JFrame {
                         student.getName(),
                         status,
                         timestamp,
-                        method
+                        method,
+                        notes
                 });
             }
 
