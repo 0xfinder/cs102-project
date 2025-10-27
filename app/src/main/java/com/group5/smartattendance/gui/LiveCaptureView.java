@@ -63,6 +63,7 @@ public class LiveCaptureView extends JFrame {
 
     // Start camera
     private VideoCapture capture;
+    private boolean cameraIsRunning = true;
 
     // Store image as 2D matrix
     private Mat webcamFrame;
@@ -156,7 +157,7 @@ public class LiveCaptureView extends JFrame {
         btnBack.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
+                cameraIsRunning = false;
                 dispose(); // dispose method (of JFrame) kills the instance
             }
         });
@@ -226,7 +227,7 @@ public class LiveCaptureView extends JFrame {
         byte[] imageData;
 
         ImageIcon icon;
-        while (isVisible() && capture.read(webcamFrame)) { // program loop
+        while (cameraIsRunning && isVisible() && capture.read(webcamFrame)) { // program loop
             // read image to matrix
             // capture.read(frame);
             if (!capture.read(webcamFrame)) {
