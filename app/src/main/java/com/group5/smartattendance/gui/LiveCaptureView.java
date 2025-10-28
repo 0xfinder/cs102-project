@@ -220,7 +220,7 @@ public class LiveCaptureView extends JFrame {
         capture = new VideoCapture(webcamIndex);
         if (!capture.isOpened()) {
             // System.out.println("Error opening webcam!");
-            new AlertBoxView("Error opening webcam!", "Error opening webcam!");
+            warningBox("Error opening webcam!");
             return;
         }
         webcamFrame = new Mat();
@@ -315,6 +315,10 @@ public class LiveCaptureView extends JFrame {
         Path output = studentFolder.resolve(String.format("%s_%02d.jpg", sid, imageIndex));
         Imgcodecs.imwrite(output.toString(),
                 imageToSave);
+    }
+
+    private void warningBox(String msg) {
+        JOptionPane.showMessageDialog(this, msg);
     }
 
     // Main driver method
