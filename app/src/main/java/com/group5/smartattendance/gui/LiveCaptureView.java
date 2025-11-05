@@ -41,6 +41,7 @@ import org.opencv.videoio.VideoCapture;
 import com.group5.smartattendance.core.CascadeLoader;
 import com.group5.smartattendance.persistence.StudentManager;
 import com.group5.smartattendance.student.Student;
+import com.group5.smartattendance.core.Configuration;
 
 // Class - Swing Class
 public class LiveCaptureView extends JFrame {
@@ -72,8 +73,10 @@ public class LiveCaptureView extends JFrame {
 
     // OpenCV Stuff
     // private String saveFolder = "images";
+    private Configuration config = Configuration.getInstance();
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
-    private int webcamIndex = 0; // Get value from OptionsManager when done
+    // private int webcamIndex = 0; // Get value from OptionsManager when done
+    private int webcamIndex = config.getCameraIndex();
 
     public LiveCaptureView() {
         // Designing UI

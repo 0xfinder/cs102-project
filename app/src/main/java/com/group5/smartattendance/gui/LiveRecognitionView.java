@@ -43,6 +43,7 @@ import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.session.SessionManager;
 import com.group5.smartattendance.persistence.StudentManager;
 import com.group5.smartattendance.student.HistogramData;
+import com.group5.smartattendance.core.Configuration;
 
 // Class - Swing Class
 public class LiveRecognitionView extends JFrame {
@@ -82,8 +83,11 @@ public class LiveRecognitionView extends JFrame {
     final int bbTextThickness = 2; // default from demo: 2
 
     // Misc Variables
-    final double threshold = 0.7; // Get value from OptionsManager when done
-    final int webcamIndex = 0; // Get value from OptionsManager when done
+    // final double threshold = 0.7; // Get value from OptionsManager when done
+    // final int webcamIndex = 0; // Get value from OptionsManager when done
+    private Configuration config = Configuration.getInstance();
+    final double threshold = config.getRecognitionThreshold();
+    final int webcamIndex = config.getCameraIndex();
 
     private SessionManager sm = new SessionManager();
     private Session currSession;
@@ -92,8 +96,12 @@ public class LiveRecognitionView extends JFrame {
 
     private long lastCaptureTime = System.currentTimeMillis(); // in milliseconds
     final long longMultiplier = 1000; // 1s = 1000ms
-    final long prepareTime = 4 * longMultiplier; // Time before prepared signal starts
-    final long cooldownTime = 5 * longMultiplier; // Get value from OptionsManager when done
+    // final long prepareTime = 4 * longMultiplier; // Time before prepared signal
+    // starts
+    // final long cooldownTime = 5 * longMultiplier; // Get value from
+    // OptionsManager when done
+    final long prepareTime = (config.getCooldownSeconds() - 1) * longMultiplier; // Time before prepared signal starts
+    final long cooldownTime = config.getCooldownSeconds() * longMultiplier;
     private boolean sessionStarted = false;
 
     public LiveRecognitionView() {
@@ -342,7 +350,8 @@ public class LiveRecognitionView extends JFrame {
             Scalar bbColor = bbColorWarning; // Bounding Box color defaults to warning color, success is too dark;
             // Set bbColor to green during prepare stage
             long sysTime = System.currentTimeMillis();
-            if (lastCaptureTime + prepareTime <= sysTime && sysTime <= lastCaptureTime + cooldownTime) {
+            if (sessionStarted && lastCaptureTime + prepareTime <= sysTime
+                    && sysTime <= lastCaptureTime + cooldownTime) {
                 bbColor = bbColorSuccess;
             } else if (detectedStudentScore < threshold) {
                 bbColor = bbColorDanger;
