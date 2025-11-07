@@ -2,6 +2,7 @@ package com.group5.smartattendance.marker;
 
 import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.student.Student;
+import com.group5.smartattendance.core.Configuration;
 
 import java.sql.SQLException;
 import java.time.Duration;
@@ -44,22 +45,6 @@ public class AutoMarker implements AttendanceMarker {
     // mark attendance for a student in a session
     public AttendanceRecord markAttendance(MarkingRequest request) throws SQLException {
         Objects.requireNonNull(request, "request must not be null");
-        // double confidence = request.confidence();
-        // if (confidence < confirmationLowerBound) {
-        // throw new IllegalArgumentException("Recognition confidence below minimum
-        // threshold");
-        // }
-
-        // if (confidence < recognitionThreshold) {
-        // boolean confirmed = request.confirmationHandler()
-        // .map(handler -> handler.confirm(request.session(), request.student(),
-        // confidence))
-        // .orElse(false);
-        // if (!confirmed) {
-        // throw new IllegalArgumentException("Low-confidence recognition was not
-        // confirmed");
-        // }
-        // }
 
         Session session = request.getSession();
         Student student = request.getStudent();
@@ -73,59 +58,50 @@ public class AutoMarker implements AttendanceMarker {
         }
 
         Instant markedAt = request.markedAt();
+        AttendanceRecord.Status newStatus = computeStatus(session, markedAt, ZoneId.systemDefault());
 
         Optional<AttendanceRecord> existingRecord = AttendanceManager.findBySessionAndStudentId(session.getId(),
                 student.getId());
-        // check if there is an existing record (should always be present)
+
         if (existingRecord.isPresent()) {
             AttendanceRecord current = existingRecord.get();
-            // get session date and start time (in local time), convert to instant with zone
-            // default
-            Instant sessionStart = session.getSessionDate().atTime(session.getStartTime())
-                    .atZone(ZoneId.systemDefault()).toInstant();
-            // TODO: change to use config value for late threshold
-            // TODO: prob extra but prioritise presence over confidence
-            if (markedAt.isAfter(sessionStart.plus(Duration.ofMinutes(15)))) {
-                current = AttendanceManager.update(current.setStatus(AttendanceRecord.Status.LATE));
-            } else {
-                current = AttendanceManager.update(current.setStatus(AttendanceRecord.Status.PRESENT));
+
+            // Update status only if improving to PRESENT or if current is not PRESENT
+            if (newStatus == AttendanceRecord.Status.PRESENT
+                    || current.getStatus() != AttendanceRecord.Status.PRESENT) {
+                current = AttendanceManager.update(current.setStatus(newStatus));
             }
 
-            // if there is no method, update as auto
-            // guard clause for no method
+            // Handle method and confidence updates
             if (current.getMethod().isEmpty()) {
                 return AttendanceManager.update(current.setAuto(
                         markedAt,
                         request.confidence().orElse(Double.NaN),
                         request.notes().orElse(null)));
-            }
-
-            // if manual record, return
-            if (current.getMethod().get() == AttendanceRecord.Method.MANUAL) {
+            } else if (current.getMethod().get() == AttendanceRecord.Method.MANUAL) {
                 return current;
-            }
-
-            // if auto record, check if confidence is higher than current, if so, update
-            if (current.getMethod().get() == AttendanceRecord.Method.AUTO) {
+            } else {
+                // if confidence is higher than current, update
                 double confidence = request.confidence().orElse(Double.NaN);
                 if (Double.isNaN(confidence) || confidence > current.getConfidence()) {
                     return AttendanceManager.update(current.setAuto(
                             markedAt,
-                            request.confidence().orElse(Double.NaN),
+                            confidence,
                             request.notes().orElse(null)));
                 }
+                return current;
             }
+        } else {
+            // No existing record, create new
+            AttendanceRecord newRecord = AttendanceRecord.createAuto(
+                    session,
+                    student,
+                    newStatus,
+                    markedAt,
+                    request.confidence().orElse(Double.NaN),
+                    request.notes().orElse(null));
+            return AttendanceManager.update(newRecord);
         }
-
-        AttendanceRecord.Status computedStatus = computeStatus(session, markedAt, ZoneId.systemDefault());
-        AttendanceRecord newRecord = AttendanceRecord.createAuto(
-                session,
-                student,
-                computedStatus,
-                markedAt,
-                request.confidence().orElse(Double.NaN),
-                request.notes().orElse(null));
-        return AttendanceManager.update(newRecord);
     }
 
     private AttendanceRecord.Status computeStatus(Session session, Instant eventTime, ZoneId zoneId) {
@@ -133,7 +109,8 @@ public class AutoMarker implements AttendanceMarker {
                 .atTime(session.getStartTime())
                 .atZone(zoneId)
                 .toInstant();
-        Instant lateCutoff = sessionStart.plus(Duration.ofMinutes(15));
+        Instant lateCutoff = sessionStart
+                .plus(Duration.ofMinutes(Configuration.getInstance().getLateThresholdMinutes()));
         return eventTime.isAfter(lateCutoff) ? AttendanceRecord.Status.LATE : AttendanceRecord.Status.PRESENT;
     }
 }
