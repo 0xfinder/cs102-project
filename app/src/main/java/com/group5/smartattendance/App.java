@@ -9,11 +9,19 @@ import org.opencv.core.Core;
 
 import javax.swing.SwingUtilities;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class App {
+
+    private static final Logger logger = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
         DatabaseManager.initialize();
+        logger.info("Database initialized");
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        logger.info("OpenCV native library loaded");
         SwingUtilities.invokeLater(MainMenuView::new);
+        logger.info("Application started");
     }
 }

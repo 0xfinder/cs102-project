@@ -19,6 +19,9 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,6 +30,8 @@ import java.util.Optional;
 import java.util.Set;
 
 public class SessionManager {
+
+    private static final Logger logger = LoggerFactory.getLogger(SessionManager.class);
 
     private static final String INSERT_SESSION_SQL = """
             INSERT INTO sessions (course_name, session_date, start_time, end_time, location, status)
@@ -118,14 +123,18 @@ public class SessionManager {
                 Session persisted = insertSession(connection, newSession);
                 seedRoster(connection, persisted);
                 connection.commit();
+                logger.info("Session created: {} on {} with roster size {}", persisted.getCourseName(),
+                        persisted.getSessionDate(), persisted.getRoster().size());
                 return persisted;
             } catch (SQLException ex) {
                 connection.rollback();
+                logger.error("Failed to create session: {}", courseName, ex);
                 throw new SessionManagerException("Failed to create session", ex);
             } finally {
                 connection.setAutoCommit(true);
             }
         } catch (SQLException ex) {
+            logger.error("Database error while creating session: {}", courseName, ex);
             throw new SessionManagerException("Failed to create session", ex);
         }
     }
@@ -142,6 +151,7 @@ public class SessionManager {
             }
             return sessions;
         } catch (SQLException ex) {
+            logger.error("Failed to list sessions", ex);
             throw new SessionManagerException("Failed to list sessions", ex);
         }
     }
@@ -159,6 +169,7 @@ public class SessionManager {
                 return Optional.empty();
             }
         } catch (SQLException ex) {
+            logger.error("Failed to fetch session {}", sessionId, ex);
             throw new SessionManagerException("Failed to fetch session " + sessionId, ex);
         }
     }
@@ -181,9 +192,11 @@ public class SessionManager {
                         .orElseThrow(() -> new SessionManagerException(
                                 "Session " + session.getId() + " not found after update"));
                 connection.commit();
+                logger.info("Session updated: {} (ID: {})", updated.getCourseName(), updated.getId());
                 return updated;
             } catch (SQLException | RuntimeException ex) {
                 connection.rollback();
+                logger.error("Failed to update session: {}", session.getId(), ex);
                 throw ex;
             } finally {
                 connection.setAutoCommit(true);
@@ -212,14 +225,17 @@ public class SessionManager {
                 Roster updatedRoster = fetchRoster(connection, id);
                 Session updatedSession = session.copyWithRoster(updatedRoster);
                 connection.commit();
+                logger.info("Roster updated for session {}: {} students", sessionId, updatedRoster.size());
                 return updatedSession;
             } catch (SQLException | RuntimeException ex) {
                 connection.rollback();
+                logger.error("Failed to update roster for session {}", sessionId, ex);
                 throw ex;
             } finally {
                 connection.setAutoCommit(true);
             }
         } catch (SQLException ex) {
+            logger.error("Database error while updating roster for session {}", sessionId, ex);
             throw new SessionManagerException("Failed to update roster for session " + sessionId, ex);
         }
     }
@@ -245,7 +261,9 @@ public class SessionManager {
                             AttendanceRecord.Status.ABSENT, Instant.now(), null));
                 }
             }
+            logger.info("Closed session {}, marked remaining students as absent", sessionId);
         } catch (SQLException ex) {
+            logger.error("Failed to close session {}", sessionId, ex);
             throw new SessionManagerException("Failed to close session " + sessionId, ex);
         }
         return setStatus(sessionId, Session.Status.CLOSED);
@@ -266,19 +284,24 @@ public class SessionManager {
                     statement.executeUpdate();
                 }
                 connection.commit();
+                logger.info("Session {} deleted", sessionId);
             } catch (SessionManagerException ex) {
                 connection.rollback();
+                logger.error("Cannot delete session {}: {}", sessionId, ex.getMessage());
                 throw ex;
             } catch (SQLException ex) {
                 connection.rollback();
+                logger.error("Database error deleting session {}", sessionId, ex);
                 throw new SessionManagerException("Failed to delete session " + sessionId, ex);
             } catch (RuntimeException ex) {
                 connection.rollback();
+                logger.error("Unexpected error deleting session {}", sessionId, ex);
                 throw ex;
             } finally {
                 connection.setAutoCommit(true);
             }
         } catch (SQLException ex) {
+            logger.error("Database connection error deleting session {}", sessionId, ex);
             throw new SessionManagerException("Failed to delete session " + sessionId, ex);
         }
     }
@@ -288,6 +311,7 @@ public class SessionManager {
         try (Connection connection = connectionProvider.getConnection()) {
             return fetchRoster(connection, id);
         } catch (SQLException ex) {
+            logger.error("Failed to load roster for session {}", sessionId, ex);
             throw new SessionManagerException("Failed to load roster for session " + sessionId, ex);
         }
     }
@@ -302,10 +326,12 @@ public class SessionManager {
             if (updatedRows == 0) {
                 throw new SessionManagerException("Session " + sessionId + " not found");
             }
+            logger.info("Session {} status set to {}", sessionId, status);
             return getSession(sessionId)
                     .orElseThrow(() -> new SessionManagerException(
                             "Session " + sessionId + " not found after status update"));
         } catch (SQLException ex) {
+            logger.error("Failed to set status for session {}", sessionId, ex);
             throw new SessionManagerException("Failed to update session status", ex);
         }
     }
