@@ -245,7 +245,7 @@ public class SessionManager {
     }
 
     public Session closeSession(String sessionId) {
-        // for everyone in the roster that does not have a method in attendance record,
+        // for everyone in the roster that has PENDING status in attendance record,
         // set status to absent
         long id = Long.parseLong(sessionId);
         try (Connection connection = connectionProvider.getConnection()) {
@@ -256,9 +256,11 @@ public class SessionManager {
                 Optional<AttendanceRecord> attendanceRecord = AttendanceManager.findBySessionAndStudentId(
                         session.getId(),
                         student.getId());
-                if (attendanceRecord.isEmpty()) {
-                    AttendanceManager.update(AttendanceRecord.createManual(session, student,
-                            AttendanceRecord.Status.ABSENT, Instant.now(), null));
+                if (attendanceRecord.isPresent()
+                        && attendanceRecord.get().getStatus() == AttendanceRecord.Status.PENDING) {
+                    AttendanceRecord existing = attendanceRecord.get();
+                    AttendanceRecord updated = existing.setManual(AttendanceRecord.Status.ABSENT, Instant.now(), null);
+                    AttendanceManager.update(updated);
                 }
             }
             logger.info("Closed session {}, marked remaining students as absent", sessionId);
