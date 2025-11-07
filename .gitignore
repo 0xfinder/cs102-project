@@ -13,3 +13,6 @@ app/images
 
 # logs
 app/logs
+
+# config
+app/config
