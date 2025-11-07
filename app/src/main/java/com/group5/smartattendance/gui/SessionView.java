@@ -318,10 +318,10 @@ public class SessionView extends JFrame {
                 }
             }
 
-            location = (location != null && !location.trim().isEmpty() &&
-                    !location.equals("Enter location (optional)"))
-                            ? location.trim()
-                            : "";
+            location = (location != null) ? location.trim() : "";
+            if (location.isEmpty()) {
+                location = "";
+            }
             sessionManager.createSession(courseName, parsedSessionDate, parsedStartTime,
                     parsedEndTime, location, new Roster());
             loadSessions();
@@ -655,7 +655,7 @@ public class SessionView extends JFrame {
                 String name = (String) attendanceModel.getValueAt(i, 2);
                 String status = ((String) attendanceModel.getValueAt(i, 3)).toLowerCase();
 
-                if (status.equals("present"))
+                if (status.equals("present") || status.equals("late"))
                     present++;
                 if (status.equals("late")) {
                     late++;
