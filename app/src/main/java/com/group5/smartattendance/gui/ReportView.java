@@ -221,7 +221,7 @@ public class ReportView extends JFrame {
             for (int i = 0; i < detailModel.getRowCount(); i++) {
                 for (int j = 0; j < detailModel.getColumnCount(); j++) {
                     Object value = detailModel.getValueAt(i, j);
-                    writer.write(value != null ? value.toString() : "");
+                    writer.write("\"" + (value != null ? value.toString() : "") + "\"");
                     if (j < detailModel.getColumnCount() - 1)
                         writer.write(",");
                 }
