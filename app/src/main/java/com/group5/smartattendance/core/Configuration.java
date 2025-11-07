@@ -33,9 +33,9 @@ public class Configuration {
     }
 
     private void loadProperties() {
-        try (FileInputStream input = new FileInputStream("app/config/application.properties")) {
+        try (FileInputStream input = new FileInputStream("config/application.properties")) {
             properties.load(input);
-            logger.info("Loaded properties from app/config/application.properties");
+            logger.info("Loaded properties from config/application.properties");
         } catch (FileNotFoundException e) {
             // try loading from resources
             try (InputStream input = getClass().getClassLoader().getResourceAsStream("application.properties")) {
@@ -44,7 +44,7 @@ public class Configuration {
                     logger.info("Loaded properties from resources/application.properties");
                 } else {
                     // fallback defaults
-                    properties.setProperty("log.file", "logs/app.log");
+                    properties.setProperty("log.file", "logs/attendance.log");
                     properties.setProperty("db.path", "data/attendance.db");
                     properties.setProperty("recognition.threshold", "0.7");
                     properties.setProperty("late.threshold.minutes", "15");
@@ -111,11 +111,11 @@ public class Configuration {
     // method to save changes back to file
     public void save() {
         try {
-            Path configPath = Paths.get("app", "config", "application.properties");
+            Path configPath = Paths.get("config", "application.properties");
             Files.createDirectories(configPath.getParent());
             try (FileOutputStream output = new FileOutputStream(configPath.toString())) {
                 properties.store(output, "Smart Attendance System Configuration");
-                logger.info("Configuration saved to app/config/application.properties");
+                logger.info("Configuration saved to config/application.properties");
             }
         } catch (IOException e) {
             logger.error("Error saving properties to file", e);
