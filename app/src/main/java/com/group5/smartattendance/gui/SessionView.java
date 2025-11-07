@@ -149,6 +149,29 @@ public class SessionView extends JFrame {
         }
     }
 
+    private void addPlaceholder(JTextField field, String placeholder) {
+        field.setText(placeholder);
+        field.setForeground(Color.GRAY);
+
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (field.getText().equals(placeholder)) {
+                    field.setText("");
+                    field.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (field.getText().trim().isEmpty()) {
+                    field.setText(placeholder);
+                    field.setForeground(Color.GRAY);
+                }
+            }
+        });
+    }
+
     private void createNewSession() {
         // create inputs for course name, session date, start time, end time, location
         JTextField courseNameField = new JTextField(20);
@@ -159,11 +182,13 @@ public class SessionView extends JFrame {
 
         // add placeholder text to fields to show example format of inputs
         // TODO: make placeholder text greyed out
-        courseNameField.setText("Enter course name");
-        sessionDateField.setText("Enter session date (YYYY-MM-DD)");
-        startTimeField.setText("Enter start time (HH:MM)");
-        endTimeField.setText("Enter end time (HH:MM)");
-        locationField.setText("Enter location (optional)");
+        LocalDate todayDate = LocalDate.now();
+        addPlaceholder(courseNameField, "Enter course name");
+        sessionDateField.setText(todayDate.toString());
+        sessionDateField.setForeground(Color.BLACK);
+        addPlaceholder(startTimeField, "Enter start time (HH:MM)");
+        addPlaceholder(endTimeField, "Enter end time (HH:MM)");
+        addPlaceholder(locationField, "Enter location (optional)");
 
         // create a panel with the input fields
         JPanel panel = new JPanel(new GridLayout(5, 2));
@@ -180,7 +205,6 @@ public class SessionView extends JFrame {
 
         int result = JOptionPane.showConfirmDialog(this, panel, "Create New Session",
                 JOptionPane.OK_CANCEL_OPTION);
-
         if (result == JOptionPane.OK_OPTION) {
             String courseName = courseNameField.getText();
             String sessionDate = sessionDateField.getText();
@@ -246,6 +270,12 @@ public class SessionView extends JFrame {
                     }
                 }
                 // TODO: validate that start time is before end time
+                if (valid && parsedStartTime != null && parsedEndTime != null) {
+                    if (!parsedStartTime.isBefore(parsedEndTime)) {
+                        errorMsg.append("Start time must be before end time.\n");
+                        valid = false;
+                    }
+                }
 
                 if (!valid) {
                     JOptionPane.showMessageDialog(this, errorMsg.toString().trim(), "Validation Error",
@@ -288,7 +318,10 @@ public class SessionView extends JFrame {
                 }
             }
 
-            location = (location != null && !location.trim().isEmpty()) ? location.trim() : "";
+            location = (location != null && !location.trim().isEmpty() &&
+                    !location.equals("Enter location (optional)"))
+                            ? location.trim()
+                            : "";
             sessionManager.createSession(courseName, parsedSessionDate, parsedStartTime,
                     parsedEndTime, location, new Roster());
             loadSessions();
@@ -484,7 +517,6 @@ public class SessionView extends JFrame {
                         return;
                     }
 
-                    // ✅ Create an updated copy — same ID, roster, and status
                     Session updatedSession = new Session(
                             session.getId(),
                             courseName,
@@ -495,11 +527,9 @@ public class SessionView extends JFrame {
                             session.getStatus(),
                             session.getRoster());
 
-                    // ✅ Persist to DB
                     SessionManager sm = new SessionManager();
                     sm.updateSession(updatedSession);
 
-                    // ✅ Save attendance and refresh counters
                     saveManualChanges();
                     updateCountersAndAlerts();
                     lblHeader.setText("Session: " + courseName + " - " + date);
