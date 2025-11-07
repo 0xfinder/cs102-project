@@ -2,8 +2,14 @@ package com.group5.smartattendance.core;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.Files;
 import java.util.Properties;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,20 +33,30 @@ public class Configuration {
     }
 
     private void loadProperties() {
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("application.properties")) {
-            if (input != null) {
-                properties.load(input);
-            } else {
-                // fallback defaults
-                properties.setProperty("log.file", "logs/app.log");
-                properties.setProperty("db.path", "data/attendance.db");
-                properties.setProperty("recognition.threshold", "0.7");
-                properties.setProperty("late.threshold.minutes", "15");
-                properties.setProperty("cooldown.seconds", "10");
-                properties.setProperty("camera.index", "0");
+        try (FileInputStream input = new FileInputStream("app/config/application.properties")) {
+            properties.load(input);
+            logger.info("Loaded properties from app/config/application.properties");
+        } catch (FileNotFoundException e) {
+            // try loading from resources
+            try (InputStream input = getClass().getClassLoader().getResourceAsStream("application.properties")) {
+                if (input != null) {
+                    properties.load(input);
+                    logger.info("Loaded properties from resources/application.properties");
+                } else {
+                    // fallback defaults
+                    properties.setProperty("log.file", "logs/app.log");
+                    properties.setProperty("db.path", "data/attendance.db");
+                    properties.setProperty("recognition.threshold", "0.7");
+                    properties.setProperty("late.threshold.minutes", "15");
+                    properties.setProperty("cooldown.seconds", "10");
+                    properties.setProperty("camera.index", "0");
+                    logger.info("Using default properties");
+                }
+            } catch (IOException ex) {
+                logger.error("Error loading properties from resources", ex);
             }
         } catch (IOException e) {
-            logger.error("Error loading properties", e);
+            logger.error("Error loading properties from file", e);
         }
     }
 
@@ -92,9 +108,17 @@ public class Configuration {
         properties.setProperty("camera.index", String.valueOf(cameraIndex));
     }
 
-    // method to save changes back to file if needed
+    // method to save changes back to file
     public void save() {
-        // implement saving to file if required
-        // for simplicity, not implemented here
+        try {
+            Path configPath = Paths.get("app", "config", "application.properties");
+            Files.createDirectories(configPath.getParent());
+            try (FileOutputStream output = new FileOutputStream(configPath.toString())) {
+                properties.store(output, "Smart Attendance System Configuration");
+                logger.info("Configuration saved to app/config/application.properties");
+            }
+        } catch (IOException e) {
+            logger.error("Error saving properties to file", e);
+        }
     }
 }
