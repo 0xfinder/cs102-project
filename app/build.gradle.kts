@@ -33,6 +33,9 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.9")
     // Logback Classic (includes Logback Core)
     implementation("ch.qos.logback:logback-classic:1.4.11")
+
+    // BCrypt for password hashing
+    implementation("at.favre.lib:bcrypt:0.10.2")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
