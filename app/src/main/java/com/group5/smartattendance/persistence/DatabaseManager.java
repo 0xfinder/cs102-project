@@ -1,5 +1,7 @@
 package com.group5.smartattendance.persistence;
 
+import com.group5.smartattendance.core.Configuration;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +15,7 @@ import java.sql.Statement;
 
 // db manager that connects to sqlite db and initializes schemas
 public final class DatabaseManager {
-    private static final Path DATABASE_PATH = Paths.get("data", "attendance.db");
+    private static final Path DATABASE_PATH = Paths.get(Configuration.getInstance().getDbPath());
     private static final String JDBC_URL = "jdbc:sqlite:" + DATABASE_PATH.toString();
     private static boolean INITIALIZED = false;
 
