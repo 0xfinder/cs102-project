@@ -34,3 +34,13 @@ mvn install:install-file "-Dfile=/path/to/opencv-480.jar" "-DgroupId=org.opencv"
 # MacOS
 ./gradlew test
 ```
+
+## Package fat JAR
+
+```bash
+# Windows
+./gradlew.bat jar
+
+# MacOS
+./gradlew jar
+```
