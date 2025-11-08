@@ -3,7 +3,6 @@
 // using OpenCV
 
 // Importing openCV modules
-//package com.opencvcamera;
 package com.group5.smartattendance.gui;
 
 // importing swing and awt classes
@@ -14,22 +13,21 @@ import java.awt.event.ActionListener;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.List;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 
 import org.opencv.core.*;
-import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.videoio.VideoCapture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.group5.smartattendance.core.CascadeLoader;
 import com.group5.smartattendance.persistence.StudentManager;
@@ -42,14 +40,6 @@ public class LiveCaptureView extends JFrame {
     private JLabel cameraScreen;
     private JButton btnCapture;
     private JButton btnBack;
-
-    // private JCheckBox newStudentCheck;
-    // private JLabel newStudentLabel;
-
-    // private JLabel nameLabel;
-    // private JTextField nameTextField;
-    // private JLabel sidFromNameLabel;
-    private JButton btnRegisterNewStudent;
 
     private JLabel sidLabel;
     private JTextField sidTextField;
@@ -65,13 +55,15 @@ public class LiveCaptureView extends JFrame {
     private boolean clicked = false;
 
     // OpenCV Stuff
-    // private String saveFolder = "images";
     private Configuration config = Configuration.getInstance();
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
-    // private int webcamIndex = 0; // Get value from OptionsManager when done
-    private int webcamIndex = config.getCameraIndex();
+    private final int webcamIndex = config.getCameraIndex();
+
+    // Logging
+    private static final Logger logger = LoggerFactory.getLogger(LiveCaptureView.class);
 
     public LiveCaptureView() {
+        logger.info("Initialising LiveCameraView");
         // Designing UI
         setLayout(null);
 
@@ -128,6 +120,7 @@ public class LiveCaptureView extends JFrame {
         btnCapture.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                logger.info("Capture button clicked");
                 clicked = true;
             }
         });
@@ -136,7 +129,10 @@ public class LiveCaptureView extends JFrame {
         btnBack.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                logger.info("Preparing to close LiveRecognitionView");
+                logger.info("Stopping camera");
                 cameraIsRunning = false;
+                logger.info("Closing LiveCaptureView");
                 dispose(); // dispose method (of JFrame) kills the instance
             }
         });
@@ -149,8 +145,10 @@ public class LiveCaptureView extends JFrame {
                 String tempSid = sidTextField.getText();
                 String studentName = getNameFromSID(tempSid);
                 if (studentName.isEmpty()) {
+                    logger.warn("Student ID cannot be found");
                     nameFromSIDLabel.setText("Invalid SID");
                 } else {
+                    logger.info(String.format("Student found for SID %s: %s", tempSid, studentName));
                     nameFromSIDLabel.setText("Student: " + studentName);
                 }
             }
@@ -186,9 +184,11 @@ public class LiveCaptureView extends JFrame {
     // Creating a camera
     public void startCamera() {
         // Start Webcam
+        logger.info("Starting camera");
         capture = new VideoCapture(webcamIndex);
         if (!capture.isOpened()) {
             // System.out.println("Error opening webcam!");
+            logger.error(String.format("Error opening webcam index %d", webcamIndex));
             warningBox("Error opening webcam!");
             return;
         }
@@ -220,6 +220,7 @@ public class LiveCaptureView extends JFrame {
 
     private void detectAndSaveFace() {
         // from FaceCropDemo.java
+        // DO NOT LOG OUTSIDE OF clicked LOOP! RUNS EVERY FRAME!
         gray = new Mat();
         Imgproc.cvtColor(webcamFrame, gray, Imgproc.COLOR_BGR2GRAY); // Convert color image to greyscale and assign to
         // variable
@@ -244,6 +245,8 @@ public class LiveCaptureView extends JFrame {
 
         if (faceArray.length > 0 && clicked) { // If faces detected and button is clicked
             // Crop and save the first detected face
+            logger.info("Face detected");
+            logger.info("Processing face image");
             Rect rect = faceArray[0];
             Mat face = gray.submat(rect);
             Mat resizedFace = new Mat();
@@ -255,23 +258,22 @@ public class LiveCaptureView extends JFrame {
             // Clean up temporary Mat
             resizedFace.release();
             face.release();
+        } else if (faceArray.length == 0 && clicked) {
+            logger.error("No face detected");
         }
     }
 
     private void createFile(Mat imageToSave) {
+        logger.info("Saving face image");
         // Get name from text field
         String sid = sidTextField.getText(); // To Replace with SID
-
-        // Blank name
-        if (sid.isBlank()) {
-            sid = "unnamed";
-        }
+        Path studentFolder = getStudentFromSID(sid).getFaceImagesPath();
 
         // Create folder if folder doesn't exist
-        Path studentFolder = getStudentFromSID(sid).getFaceImagesPath();
         // Path studentFolder = Paths.get(saveFolder, sid);
         try {
             Files.createDirectories(studentFolder);
+            logger.info(String.format("Created folder for SID %s", sid));
         } catch (Exception e) {
             System.out.println(e);
         }

@@ -50,6 +50,9 @@ import com.group5.smartattendance.persistence.StudentManager;
 import com.group5.smartattendance.student.HistogramData;
 import com.group5.smartattendance.core.Configuration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 // Class - Swing Class
 public class LiveRecognitionView extends JFrame {
     // Swing Elements
@@ -88,8 +91,6 @@ public class LiveRecognitionView extends JFrame {
     final int bbTextThickness = 2; // default from demo: 2
 
     // Misc Variables
-    // final double threshold = 0.7; // Get value from OptionsManager when done
-    // final int webcamIndex = 0; // Get value from OptionsManager when done
     private Configuration config = Configuration.getInstance();
     final double threshold = config.getRecognitionThreshold();
     final int webcamIndex = config.getCameraIndex();
@@ -100,16 +101,15 @@ public class LiveRecognitionView extends JFrame {
     private List<FaceData> studentFaceData = new ArrayList<>();
 
     private long lastCaptureTime = System.currentTimeMillis(); // in milliseconds
-    final long longMultiplier = 1000; // 1s = 1000ms
-    // final long prepareTime = 4 * longMultiplier; // Time before prepared signal
-    // starts
-    // final long cooldownTime = 5 * longMultiplier; // Get value from
-    // OptionsManager when done
-    final long prepareTime = (config.getCooldownSeconds() - 1) * longMultiplier; // Time before prepared signal starts
-    final long cooldownTime = config.getCooldownSeconds() * longMultiplier;
+    final int prepareTimeSeconds = 1;
+    final long cooldownTime = config.getCooldownSeconds() * 1000; // in milliseconds
     private boolean sessionStarted = false;
 
+    // Logging
+    private static final Logger logger = LoggerFactory.getLogger(LiveRecognitionView.class);
+
     public LiveRecognitionView() {
+        logger.info("Initialising LiveRecognitionView");
         // Designing UI
         setLayout(null);
 
@@ -131,6 +131,7 @@ public class LiveRecognitionView extends JFrame {
         add(btnBack);
 
         // Get Sessions
+        logger.info("Fetching session data");
         List<Session> sessions = sm.listSessions();
         List<String> sessionNames = new ArrayList<>();
         for (Session session : sessions) {
@@ -181,6 +182,7 @@ public class LiveRecognitionView extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (selectedSessionID != null) {
                     if (sessionStarted == false) {
+                        logger.info("Starting Attendance Marker");
                         sm.openSession(selectedSessionID);
                         sessionStarted = true;
 
@@ -197,6 +199,7 @@ public class LiveRecognitionView extends JFrame {
                                 "Confirm Stop Attendance Taking");
                         // 0 - Close, 1 - Don't Close
                         if (returnVal == 0) {
+                            logger.info("Stopping Attendance Marker");
                             sessionStarted = false;
 
                             // Update UI
@@ -208,6 +211,7 @@ public class LiveRecognitionView extends JFrame {
                         }
                     }
                 } else {
+                    logger.error("Failed to start marker: No session selected");
                     warningBox("Please select a session");
                 }
             }
@@ -216,14 +220,14 @@ public class LiveRecognitionView extends JFrame {
         btnBack.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("Preparing to close LiveRecognitionView");
+                logger.info("Preparing to close LiveRecognitionView");
                 if (sessionStarted) {
                     System.out.println("Stopping attendance taking");
                 }
                 sessionStarted = false; // Stop attendance taking loop if still active
-                System.out.println("Stopping camera");
+                logger.info("Stopping camera");
                 cameraIsRunning = false;
-                System.out.println("Close LiveRecognitionView");
+                logger.info("Closing LiveRecognitionView");
                 dispose(); // dispose method (of JFrame) kills the instance
             }
         });
@@ -231,10 +235,12 @@ public class LiveRecognitionView extends JFrame {
         dropdownSession.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 selectedSessionID = ((String) dropdownSession.getSelectedItem()).split(" - ")[0].substring(1);
+                logger.info(String.format("Selected session ID %s", selectedSessionID));
+                logger.info(String.format("Fetching student face data from session ID %s", selectedSessionID));
                 studentFaceData = getFaceData(); // get face data from session id
                 if (studentFaceData.size() == 0) {
+                    logger.warn(String.format("No face data found for session ID %s", selectedSessionID));
                     warningBox(
                             "No student face data found. Please ensure session roster is not empty, and that students have captured face data.");
                 }
@@ -246,9 +252,11 @@ public class LiveRecognitionView extends JFrame {
     // Creating a camera
     public void startCamera() {
         // Start Webcam
+        logger.info("Starting camera");
         capture = new VideoCapture(webcamIndex);
         if (!capture.isOpened()) {
             // System.out.println("Error opening webcam!");
+            logger.error(String.format("Error opening webcam index %d", webcamIndex));
             warningBox("Error opening webcam!");
             return;
         }
@@ -275,6 +283,8 @@ public class LiveRecognitionView extends JFrame {
                     markAttendance(); // Mark Attendance normally;
                 } else {
                     // Pause code and ask for confirmation box
+                    logger.warn(String.format("Face detected with low confidence: %s, confidence %.5f", detectedStudent,
+                            detectedStudentScore));
                     String[] closeSessionButtons = { "Mark", "Don't Mark" };
                     int returnVal = confirmBox(closeSessionButtons,
                             String.format("Mark Attendence for %s? (Confidence: %.1f", detectedStudent,
@@ -282,7 +292,10 @@ public class LiveRecognitionView extends JFrame {
                             "Confirm Mark Attendance");
                     // 0 - Close, 1 - Don't Close
                     if (returnVal == 0) {
+                        logger.info("Confirming detection");
                         markAttendance(); // Mark Attendance normally;
+                    } else {
+                        logger.info("Ignoring detection");
                     }
                 }
                 lastCaptureTime = System.currentTimeMillis();
@@ -304,6 +317,7 @@ public class LiveRecognitionView extends JFrame {
 
     private void detectFace() {
         // from FaceRecognitionDemo.java
+        // DO NOT LOG! RUNS EVERY FRAME!
         gray = new Mat();
 
         JLabel label = new JLabel();
@@ -361,6 +375,7 @@ public class LiveRecognitionView extends JFrame {
             Scalar bbColor = bbColorWarning; // Bounding Box color defaults to warning color, success is too dark;
             // Set bbColor to green during prepare stage
             long sysTime = System.currentTimeMillis();
+            long prepareTime = cooldownTime - (prepareTimeSeconds * 1000); // Time before prepared signal starts
             if (sessionStarted && lastCaptureTime + prepareTime <= sysTime
                     && sysTime <= lastCaptureTime + cooldownTime) {
                 bbColor = bbColorSuccess;
@@ -484,6 +499,7 @@ public class LiveRecognitionView extends JFrame {
 
         if (detectedStudent.equals("No Student Detected")) {
             labelMessage = "No Face Detected!";
+            logger.error(String.format("Failed to mark attendance: No face detected"));
         } else {
             try {
                 // Get MarkingRequest instance
@@ -496,6 +512,7 @@ public class LiveRecognitionView extends JFrame {
                 AttendanceRecord newRecord = marker.markAttendance(request);
 
                 labelMessage = String.format("Attendence Marked for %s", detectedStudent);
+                // Logging done in AttendanceManaer
 
             } catch (Exception e) {
                 System.out.println("LiveRecognitionView.markAttendance() " + e);

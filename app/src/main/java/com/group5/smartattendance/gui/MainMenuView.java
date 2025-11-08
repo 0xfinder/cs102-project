@@ -12,6 +12,9 @@ import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.group5.smartattendance.gui.*;
 
 public class MainMenuView extends JFrame {
@@ -26,7 +29,11 @@ public class MainMenuView extends JFrame {
     private JButton btn04;
     private JButton btn05;
 
+    // Logging
+    private static final Logger logger = LoggerFactory.getLogger(MainMenuView.class);
+
     public MainMenuView() {
+        logger.info("Initialising MainMenuView");
         // Designing UI
         setLayout(null);
 
@@ -101,7 +108,7 @@ public class MainMenuView extends JFrame {
         btnQuit.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("Quitting...");
+                logger.info("Closing MainMenuView");
                 dispose();
             }
         });
@@ -116,6 +123,7 @@ public class MainMenuView extends JFrame {
         btn00.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                logger.info("Launching StudentView");
                 new StudentView(); // opens your class!
             }
         });
@@ -123,6 +131,7 @@ public class MainMenuView extends JFrame {
         btn01.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                logger.info("Launching SessionView");
                 new SessionView();
             }
         });
@@ -131,6 +140,7 @@ public class MainMenuView extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 // Open the ReportView window
+                logger.info("Launching ReportView");
                 new ReportView();
             }
         });
@@ -145,6 +155,7 @@ public class MainMenuView extends JFrame {
         btn03.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                logger.info("Launching SettingView");
                 new SettingView(); // open the settings window
             }
         });
@@ -152,9 +163,11 @@ public class MainMenuView extends JFrame {
         btn04.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                logger.info("Launching LiveCaptureView");
                 LiveCaptureView liveCaptureView = new LiveCaptureView(); // Launch LiveCaptureView
 
                 // Start camera in thread
+                logger.info("Launching LiveCaptureView Camera in another thread");
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -167,9 +180,11 @@ public class MainMenuView extends JFrame {
         btn05.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                logger.info("Launching LiveRecognitionView");
                 LiveRecognitionView liveRecognitionView = new LiveRecognitionView(); // Launch LiveRecognitionView
 
                 // Start camera in thread
+                logger.info("Launching LiveRecognitionView Camera in another thread");
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
