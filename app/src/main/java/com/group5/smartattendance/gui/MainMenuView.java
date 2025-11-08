@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.group5.smartattendance.gui.*;
+import com.group5.smartattendance.user.AuthManager;
 
 public class MainMenuView extends JFrame {
     // Class for the main menu
@@ -51,7 +52,7 @@ public class MainMenuView extends JFrame {
         final int btnMargin_x = 40; // left/right margin
         final int btnGap = 20;
 
-        btnQuit = new JButton("Quit");
+        btnQuit = new JButton("Sign Out");
         btnQuit.setBounds(
                 (window_w - btn_w) / 2,
                 window_h - 2 * btn_h - btnMargin_b,
@@ -108,8 +109,10 @@ public class MainMenuView extends JFrame {
         btnQuit.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                logger.info("Closing MainMenuView");
+                logger.info("User signed out");
+                AuthManager.logout();
                 dispose();
+                new LoginView();
             }
         });
 
