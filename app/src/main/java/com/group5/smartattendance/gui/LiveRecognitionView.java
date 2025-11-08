@@ -17,6 +17,7 @@ import java.awt.image.BufferedImage;
 import java.sql.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,8 +37,12 @@ import org.opencv.videoio.VideoCapture;
 import com.group5.smartattendance.student.FaceData;
 import com.group5.smartattendance.student.Student;
 import com.group5.smartattendance.core.CascadeLoader;
+import com.group5.smartattendance.marker.AutoMarker;
+import com.group5.smartattendance.marker.MarkingRequest;
 import com.group5.smartattendance.marker.AttendanceManager;
+import com.group5.smartattendance.marker.AttendanceMarker;
 import com.group5.smartattendance.marker.AttendanceRecord;
+import com.group5.smartattendance.marker.AttendanceRecord.Status;
 import com.group5.smartattendance.session.Roster;
 import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.session.SessionManager;
@@ -186,12 +191,12 @@ public class LiveRecognitionView extends JFrame {
                         // Init capture Time
                         lastCaptureTime = System.currentTimeMillis();
                     } else {
-                        String[] closeSessionButtons = { "Close", "Don't Close" };
+                        String[] closeSessionButtons = { "Stop", "Don't Stop" };
                         int returnVal = confirmBox(closeSessionButtons,
-                                "Close Session? (Remaining students will be marked 'Absent')", "Confirm Close Session");
+                                "You are about to stop attendance taking for the session. Continue?",
+                                "Confirm Stop Attendance Taking");
                         // 0 - Close, 1 - Don't Close
                         if (returnVal == 0) {
-                            // sm.closeSession(selectedSessionID); // Disabled for now
                             sessionStarted = false;
 
                             // Update UI
@@ -211,8 +216,14 @@ public class LiveRecognitionView extends JFrame {
         btnBack.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                System.out.println("Preparing to close LiveRecognitionView");
+                if (sessionStarted) {
+                    System.out.println("Stopping attendance taking");
+                }
                 sessionStarted = false; // Stop attendance taking loop if still active
+                System.out.println("Stopping camera");
                 cameraIsRunning = false;
+                System.out.println("Close LiveRecognitionView");
                 dispose(); // dispose method (of JFrame) kills the instance
             }
         });
@@ -467,39 +478,33 @@ public class LiveRecognitionView extends JFrame {
         return hd;
     }
 
-    // To Update when AttendanceManager is done
     private void markAttendance() {
-        String logMessage = "";
+        String labelMessage = "";
+        Instant markedAt = Instant.now();
 
         if (detectedStudent.equals("No Student Detected")) {
-            logMessage = "No Face Detected!";
-            // } else if (selectedSessionID == null) {
-            // logLabel.setText("No Session Selected!");
-            // new AlertBoxView("No Session Selected!", "Error Marking Attendance");
+            labelMessage = "No Face Detected!";
         } else {
-            AttendanceRecord attendanceRecord = null;
             try {
-                attendanceRecord = AttendanceManager.findBySessionAndStudentId(selectedSessionID, detectedStudentID)
-                        .get();
+                // Get MarkingRequest instance
+                MarkingRequest request = MarkingRequest.builder(selectedSessionID, detectedStudentID)
+                        .markedAt(markedAt)
+                        .confidence(detectedStudentScore)
+                        .notes("").build();
+
+                AttendanceMarker marker = new AutoMarker();
+                AttendanceRecord newRecord = marker.markAttendance(request);
+
+                labelMessage = String.format("Attendence Marked for %s", detectedStudent);
+
             } catch (Exception e) {
                 System.out.println("LiveRecognitionView.markAttendance() " + e);
             }
 
-            // String status = attendanceRecord.getStatus().name();
-            // System.out.println(status);
-
-            // AttendanceManager here
-            // get attendance status
-            // if (pending && is late) {mark late}
-            // else if (pending) {mark present}
-            // else if (preset) {"student alr present" message}
-            //
-
-            logMessage = String.format("Attendence Marked for %s", detectedStudent);
         }
 
-        logLabel.setText(logMessage);
-        System.out.println(logMessage);
+        logLabel.setText(labelMessage);
+        System.out.println(labelMessage);
     }
 
     private void warningBox(String msg) {
