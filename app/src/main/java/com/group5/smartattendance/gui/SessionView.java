@@ -23,6 +23,9 @@ import com.group5.smartattendance.session.SessionManager;
 import com.group5.smartattendance.student.Student;
 import com.group5.smartattendance.marker.AttendanceManager;
 import com.group5.smartattendance.marker.AttendanceRecord;
+import com.group5.smartattendance.marker.ManualMarker;
+import com.group5.smartattendance.marker.MarkingRequest;
+import com.group5.smartattendance.user.AuthManager;
 
 public class SessionView extends JFrame {
 
@@ -484,6 +487,16 @@ public class SessionView extends JFrame {
             };
 
             attendanceTable = new JTable(attendanceModel);
+
+            // set column widths
+            attendanceTable.getColumnModel().getColumn(0).setPreferredWidth(50); // Included
+            attendanceTable.getColumnModel().getColumn(1).setPreferredWidth(30); // ID
+            attendanceTable.getColumnModel().getColumn(2).setPreferredWidth(120); // Name
+            attendanceTable.getColumnModel().getColumn(3).setPreferredWidth(50); // Status
+            attendanceTable.getColumnModel().getColumn(4).setPreferredWidth(150); // Timestamp
+            attendanceTable.getColumnModel().getColumn(5).setPreferredWidth(70); // Method
+            attendanceTable.getColumnModel().getColumn(6).setPreferredWidth(150); // Notes
+
             TableColumn statusColumn = attendanceTable.getColumnModel().getColumn(3);
             statusColumn.setCellEditor(new DefaultCellEditor(new JComboBox<>(
                     new String[] { "PENDING", "PRESENT", "ABSENT", "LATE" })));
@@ -578,7 +591,8 @@ public class SessionView extends JFrame {
                 SessionManager sessionManager = new SessionManager();
                 sessionManager.updateRoster(session.getId(), includedStudents);
 
-                // 3) Update attendance records only if status changed
+                // 3) Update attendance records only if status or notes changed
+                ManualMarker manualMarker = new ManualMarker();
                 for (int i = 0; i < attendanceModel.getRowCount(); i++) {
                     Boolean included = (Boolean) attendanceModel.getValueAt(i, 0);
                     if (included == null || !included)
@@ -602,19 +616,40 @@ public class SessionView extends JFrame {
                         AttendanceRecord current = existingOpt.get();
                         AttendanceRecord.Status oldStatus = current.getStatus();
 
-                        // Only write and touch timestamp when the status actually changes
                         boolean statusChanged = !oldStatus.equals(newStatus);
                         boolean notesChanged = !Objects.equals(current.getNotes().orElse(""), notesStr);
 
                         if (statusChanged || notesChanged) {
-                            AttendanceRecord updated = current.setManual(
-                                    newStatus,
-                                    statusChanged ? Instant.now() : current.getMarkedAt().orElse(null), // only update
-                                                                                                        // timestamp if
-                                                                                                        // status
-                                                                                                        // changed
-                                    notesStr);
-                            AttendanceManager.update(updated);
+                            // Use ManualMarker to mark attendance with proper status override logic
+                            String finalNotes = notesStr;
+                            String currentEmail = AuthManager.getCurrentUser().getEmail();
+                            String markedByPattern = "\\(marked by [^)]+\\)";
+                            String oldNotes = current.getNotes().orElse("");
+
+                            // Strip any marked by entry from notesStr (user input)
+                            String strippedNotes = notesStr.replaceAll("\\s*" + markedByPattern, "").trim();
+
+                            // Extract marked by entry from old notes if it exists
+                            java.util.regex.Pattern p = java.util.regex.Pattern.compile(markedByPattern);
+                            java.util.regex.Matcher m = p.matcher(oldNotes);
+                            String existingMarkedBy = m.find() ? m.group() : null;
+
+                            // Update marked by entry if status or notes changed
+                            if (existingMarkedBy != null && existingMarkedBy.contains(currentEmail)) {
+                                // Same user, keep stripped notes as is
+                                finalNotes = strippedNotes;
+                            } else {
+                                // Different user or no existing entry, add/overwrite
+                                finalNotes = strippedNotes + (strippedNotes.isEmpty() ? "" : " ") + "(marked by "
+                                        + currentEmail + ")";
+                            }
+
+                            MarkingRequest request = MarkingRequest.builder(session.getId(), studentId)
+                                    .desiredStatus(newStatus)
+                                    .markedAt(statusChanged ? Instant.now() : current.getMarkedAt().orElse(null))
+                                    .notes(finalNotes)
+                                    .build();
+                            manualMarker.markAttendance(request);
                         }
                     }
 

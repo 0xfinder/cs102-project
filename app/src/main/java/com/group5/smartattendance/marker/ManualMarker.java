@@ -32,36 +32,15 @@ public class ManualMarker implements AttendanceMarker {
 
         Optional<AttendanceRecord> existingRecord = AttendanceManager.findBySessionAndStudentId(session.getId(),
                 student.getId());
-        // check if there is an existing record (should always be present)
+
         if (existingRecord.isPresent()) {
             AttendanceRecord current = existingRecord.get();
-            // get session date and start time (in local time), convert to instant with zone
-            // default
-            Instant sessionStart = session.getSessionDate().atTime(session.getStartTime())
-                    .atZone(ZoneId.systemDefault()).toInstant();
-            // TODO: change to use config value for late threshold
-            if (markedAt.isAfter(sessionStart.plus(Duration.ofMinutes(15)))) {
-                current = AttendanceManager.update(current.setStatus(AttendanceRecord.Status.LATE));
-            } else {
-                current = AttendanceManager.update(current.setStatus(AttendanceRecord.Status.PRESENT));
-            }
 
-            // if not marked, set manual
-            if (current.getMethod().isEmpty()) {
-                return AttendanceManager.update(current.setManual(status, markedAt, notes));
-            }
-
-            // if auto, override
-            if (current.getMethod().get() == AttendanceRecord.Method.AUTO) {
-                return AttendanceManager.update(current.setManual(status, markedAt, notes));
-            }
-
-            // if manual, return
-            if (current.getMethod().isPresent() && current.getMethod().get() == AttendanceRecord.Method.MANUAL) {
-                return current;
-            }
+            // update to manual (handles empty method or AUTO override)
+            return AttendanceManager.update(current.setManual(status, markedAt, notes));
         }
 
+        // record doesn't exist, create new one
         return AttendanceManager.update(AttendanceRecord.createManual(session, student, status, markedAt, notes));
     }
 }
