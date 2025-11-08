@@ -12,6 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 
 import javax.swing.ImageIcon;
@@ -58,6 +59,7 @@ public class LiveCaptureView extends JFrame {
     private Configuration config = Configuration.getInstance();
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
     private final int webcamIndex = config.getCameraIndex();
+    private final String saveFolder = "images";
 
     // Logging
     private static final Logger logger = LoggerFactory.getLogger(LiveCaptureView.class);
@@ -164,6 +166,7 @@ public class LiveCaptureView extends JFrame {
                 return "";
             }
         } catch (Exception e) {
+            logger.error("Error: " + e);
             return "";
         }
     }
@@ -177,6 +180,7 @@ public class LiveCaptureView extends JFrame {
                 return null;
             }
         } catch (Exception e) {
+            logger.error("Error: " + e);
             return null;
         }
     }
@@ -267,7 +271,14 @@ public class LiveCaptureView extends JFrame {
         logger.info("Saving face image");
         // Get name from text field
         String sid = sidTextField.getText(); // To Replace with SID
-        Path studentFolder = getStudentFromSID(sid).getFaceImagesPath();
+        Path studentFolder = null;
+
+        if (sid.isEmpty()) {
+            logger.warn("No SID input, saving to \"unknown\" folder");
+            studentFolder = Paths.get(saveFolder, "unknown");
+        } else {
+            studentFolder = getStudentFromSID(sid).getFaceImagesPath();
+        }
 
         // Create folder if folder doesn't exist
         // Path studentFolder = Paths.get(saveFolder, sid);
@@ -275,7 +286,7 @@ public class LiveCaptureView extends JFrame {
             Files.createDirectories(studentFolder);
             logger.info(String.format("Created folder for SID %s", sid));
         } catch (Exception e) {
-            System.out.println(e);
+            logger.error("Error: " + e);
         }
 
         // Get No. images in folder already

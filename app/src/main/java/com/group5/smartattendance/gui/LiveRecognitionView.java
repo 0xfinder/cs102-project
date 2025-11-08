@@ -278,6 +278,7 @@ public class LiveRecognitionView extends JFrame {
             // Mark Attendance Logic
             if (System.currentTimeMillis() >= lastCaptureTime + cooldownTime && sessionStarted) {
                 if (detectedStudent.equals("No Student Detected") || detectedStudent.equals("Unknown Student")) {
+                    logger.warn("No student detected");
                     logLabel.setText(detectedStudent);
                 } else if (detectedStudentScore >= threshold) {
                     markAttendance(); // Mark Attendance normally;
@@ -368,7 +369,8 @@ public class LiveRecognitionView extends JFrame {
                     bbLabelText = "Unknown Student"; // To be displayed above the BB
                 }
             } catch (Exception e) {
-                System.out.println("LiveREcognitionView.detectFace() " + e);
+                // System.out.println("LiveREcognitionView.detectFace() " + e);
+                logger.error("Error: " + e);
             }
 
             // Set bounding box color based on best score (correlation: higher is better)
@@ -467,7 +469,8 @@ public class LiveRecognitionView extends JFrame {
                 }
             }
         } catch (Exception e) {
-            System.out.println("LiveRecognitionView.getFaceData() " + e);
+            // System.out.println("LiveRecognitionView.getFaceData() " + e);
+            logger.error("Error: " + e);
         }
         return studentFaceData;
 
@@ -515,7 +518,8 @@ public class LiveRecognitionView extends JFrame {
                 // Logging done in AttendanceManaer
 
             } catch (Exception e) {
-                System.out.println("LiveRecognitionView.markAttendance() " + e);
+                // System.out.println("LiveRecognitionView.markAttendance() " + e);
+                logger.error("Error: " + e);
             }
 
         }
