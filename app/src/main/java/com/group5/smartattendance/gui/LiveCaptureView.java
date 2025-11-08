@@ -11,15 +11,8 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-// Importing date class of sql package
-import java.sql.Date;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.List;
 
@@ -92,49 +85,32 @@ public class LiveCaptureView extends JFrame {
 
         // Button Element
         btnCapture = new JButton("Capture Photo");
-        btnCapture.setBounds(320 - 240, 480, 240, 40);
+        btnCapture.setBounds(40, 480, 240, 40);
         add(btnCapture);
 
         btnBack = new JButton("Back");
         btnBack.setBounds(0, 560, 80, 40);
         add(btnBack);
 
-        // Is New Student Checkbox
-        // newStudentCheck = new JCheckBox();
-        // newStudentCheck.setBounds(320, 480, 40, 40);
-        // add(newStudentCheck);
-
-        // newStudentLabel = new JLabel("New Student");
-        // newStudentLabel.setBounds(360, 480, 80, 40);
-        // add(newStudentLabel);
-
-        // NEW STUDENT UI
-        // Name Input, SID will be assigned and displayed after checking DB
-        // Name Element
-
-        btnRegisterNewStudent = new JButton("Register New Student");
-        btnRegisterNewStudent.setBounds(320 + 60, 480, 200, 40);
-        add(btnRegisterNewStudent);
-
         // EXISTING STUDENT UI
         // SID Input (case-sensitive), Name will be displayed if SID exists in DB,
         // else "Not found"
         sidLabel = new JLabel("SID:");
-        sidLabel.setBounds(320, 520, 80, 40);
+        sidLabel.setBounds(320, 480, 80, 40);
         add(sidLabel);
 
         // Text Field Element
         JLabel sLabel = new JLabel("S");
-        sLabel.setBounds(320 + 60, 520, 10, 40);
+        sLabel.setBounds(320 + 60, 480, 10, 40);
         add(sLabel);
 
         sidTextField = new JTextField("");
-        sidTextField.setBounds(320 + 70, 520, 190, 40);
+        sidTextField.setBounds(320 + 70, 480, 190, 40);
         add(sidTextField);
 
         // Name Display Label
         nameFromSIDLabel = new JLabel("Please enter an SID and press Enter");
-        nameFromSIDLabel.setBounds(320, 560, 300, 40);
+        nameFromSIDLabel.setBounds(320, 520, 300, 40);
         add(nameFromSIDLabel);
 
         // Init button event listeners
@@ -162,16 +138,6 @@ public class LiveCaptureView extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 cameraIsRunning = false;
                 dispose(); // dispose method (of JFrame) kills the instance
-            }
-        });
-
-        // Checkbox update
-        btnRegisterNewStudent.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // Open new view
-                System.out.println("Register Student View"); // dubug
-                new RegisterStudentView();
             }
         });
 
