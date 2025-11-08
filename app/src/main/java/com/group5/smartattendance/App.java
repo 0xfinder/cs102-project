@@ -3,8 +3,9 @@
  */
 package com.group5.smartattendance;
 
-import com.group5.smartattendance.gui.MainMenuView;
+import com.group5.smartattendance.gui.LoginView;
 import com.group5.smartattendance.persistence.DatabaseManager;
+import com.group5.smartattendance.persistence.UserDatabaseManager;
 import org.opencv.core.Core;
 
 import javax.swing.SwingUtilities;
@@ -18,10 +19,15 @@ public class App {
 
     public static void main(String[] args) {
         DatabaseManager.initialize();
-        logger.info("Database initialized");
+        logger.info("Attendance database initialized");
+
+        UserDatabaseManager.initialize();
+        logger.info("User database initialized");
+
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         logger.info("OpenCV native library loaded");
-        SwingUtilities.invokeLater(MainMenuView::new);
+
+        SwingUtilities.invokeLater(LoginView::new);
         logger.info("Application started");
     }
 }
