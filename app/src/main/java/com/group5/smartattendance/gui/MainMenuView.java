@@ -27,6 +27,8 @@ public class MainMenuView extends JFrame {
     private JButton btn04;
     private JButton btn05;
 
+    private JLabel userInfo;
+
     // Logging
     private static final Logger logger = LoggerFactory.getLogger(MainMenuView.class);
 
@@ -88,6 +90,16 @@ public class MainMenuView extends JFrame {
         // System.out.println(headerText.getFont());
         headerText.setFont(new Font("Dialog", Font.PLAIN, 24));
         add(headerText);
+
+        // User Info Element
+        String username = AuthManager.getCurrentUser().getFullName();
+        userInfo = new JLabel("Signed in as: " + username, SwingConstants.CENTER);
+        userInfo.setBounds(
+                (window_w - btn_w) / 2,
+                (window_h - 2 * btn_h - btnMargin_b) + 40,
+                btn_w, btn_h); // x (horizontal), y (vertical),
+                               // width, height
+        add(userInfo);
 
         setSize(new Dimension(window_w, window_h)); // w, h
         setLocationRelativeTo(null);
