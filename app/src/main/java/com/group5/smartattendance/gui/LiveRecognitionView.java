@@ -36,6 +36,8 @@ import com.group5.smartattendance.student.Student;
 import com.group5.smartattendance.core.CascadeLoader;
 import com.group5.smartattendance.marker.AutoMarker;
 import com.group5.smartattendance.marker.MarkingRequest;
+import com.group5.smartattendance.marker.AttendanceRecord.Status;
+import com.group5.smartattendance.marker.AttendanceManager;
 import com.group5.smartattendance.marker.AttendanceMarker;
 import com.group5.smartattendance.marker.AttendanceRecord;
 import com.group5.smartattendance.session.Roster;
@@ -272,11 +274,34 @@ public class LiveRecognitionView extends JFrame {
 
             // Mark Attendance Logic
             if (System.currentTimeMillis() >= lastCaptureTime + cooldownTime && sessionStarted) {
+                // Get student record status
+                // If confidence is below threshold
+                // BUT student is already marked with a higher confidence
+                // ignore
+                AttendanceRecord studentRecord = null;
+                Status studentStatus = null;
+                try {
+                    studentRecord = AttendanceManager.findBySessionAndStudentId(selectedSessionID, detectedStudentID)
+                            .get();
+                    studentStatus = studentRecord.getStatus();
+                } catch (Exception e) {
+                    logger.error("Error: " + e);
+                }
+
+                // Actual logic flow
                 if (detectedStudent.equals("No Student Detected") || detectedStudent.equals("Unknown Student")) {
                     logger.warn("No student detected");
                     logLabel.setText(detectedStudent);
-                } else if (detectedStudentScore >= threshold) {
-                    markAttendance(); // Mark Attendance normally;
+
+                } else if (detectedStudentScore >= threshold) { // If confidence is above threshold
+                    // Mark Attendance normally;
+                    markAttendance();
+                } else if (studentStatus == Status.PRESENT || studentStatus == Status.LATE) { // If student is already
+                                                                                              // present, ignore
+                    // Ignore
+                    logger.warn(String.format("Face detected with low confidence: %s, confidence %.5f", detectedStudent,
+                            detectedStudentScore));
+                    logger.info("Ignoring detection: Student already marked as PRESENT or LATE previously");
                 } else {
                     // Pause code and ask for confirmation box
                     logger.warn(String.format("Face detected with low confidence: %s, confidence %.5f", detectedStudent,
@@ -285,13 +310,13 @@ public class LiveRecognitionView extends JFrame {
                     int returnVal = confirmBox(closeSessionButtons,
                             String.format("Mark Attendence for %s? (Confidence: %.1f", detectedStudent,
                                     detectedStudentScore * 100) + "%)",
-                            "Confirm Mark Attendance");
+                            "Low Confidence Confirmation");
                     // 0 - Close, 1 - Don't Close
                     if (returnVal == 0) {
                         logger.info("Confirming detection");
                         markAttendance(); // Mark Attendance normally;
                     } else {
-                        logger.info("Ignoring detection");
+                        logger.info("Ignoring detection: User declined");
                     }
                 }
                 lastCaptureTime = System.currentTimeMillis();
