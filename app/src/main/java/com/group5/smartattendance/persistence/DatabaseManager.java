@@ -15,30 +15,36 @@ import java.sql.Statement;
 
 // db manager that connects to sqlite db and initializes schemas
 public final class DatabaseManager {
-    private static final Path DATABASE_PATH = Paths.get(Configuration.getInstance().getDbPath());
-    private static final String JDBC_URL = "jdbc:sqlite:" + DATABASE_PATH.toString();
     private static boolean INITIALIZED = false;
+    private static String INITIALIZED_DB_PATH = null;
 
     private DatabaseManager() {
         // prevent instantiation since class only has static methods
     }
 
     public static void initialize() {
-        if (!INITIALIZED) {
+        String currentDbPath = Configuration.getInstance().getDbPath();
+        if (!INITIALIZED || !currentDbPath.equals(INITIALIZED_DB_PATH)) {
             try {
-                Files.createDirectories(DATABASE_PATH.getParent());
-                applySchema();
+                Path dbPath = Paths.get(currentDbPath);
+                Files.createDirectories(dbPath.getParent());
+                applySchema(dbPath);
                 INITIALIZED = true;
+                INITIALIZED_DB_PATH = currentDbPath;
             } catch (IOException | SQLException ex) {
                 INITIALIZED = false;
+                INITIALIZED_DB_PATH = null;
                 throw new IllegalStateException("Failed to initialize database", ex);
             }
         }
     }
 
     public static Connection getConnection() throws SQLException {
+        Path dbPath = Paths.get(Configuration.getInstance().getDbPath());
+        String jdbcUrl = "jdbc:sqlite:" + dbPath.toString();
+
         initialize();
-        Connection connection = DriverManager.getConnection(JDBC_URL);
+        Connection connection = DriverManager.getConnection(jdbcUrl);
         try (Statement s = connection.createStatement()) {
             // set sqlite config
             s.execute("PRAGMA foreign_keys=ON");
@@ -51,11 +57,13 @@ public final class DatabaseManager {
     // delete database for testing
     public static void deleteDatabase() throws IOException {
         INITIALIZED = false;
-        Files.deleteIfExists(DATABASE_PATH);
+        Path dbPath = Paths.get(Configuration.getInstance().getDbPath());
+        Files.deleteIfExists(dbPath);
     }
 
-    private static void applySchema() throws IOException, SQLException {
-        try (Connection connection = DriverManager.getConnection(JDBC_URL)) {
+    private static void applySchema(Path dbPath) throws IOException, SQLException {
+        String jdbcUrl = "jdbc:sqlite:" + dbPath.toString();
+        try (Connection connection = DriverManager.getConnection(jdbcUrl)) {
             // rollback all changes if any single table creation fails
             connection.setAutoCommit(false);
             try {
