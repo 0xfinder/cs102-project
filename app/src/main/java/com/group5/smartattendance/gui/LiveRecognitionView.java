@@ -14,9 +14,6 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
 // Importing date class of sql package
-import java.sql.Date;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,10 +36,8 @@ import com.group5.smartattendance.student.Student;
 import com.group5.smartattendance.core.CascadeLoader;
 import com.group5.smartattendance.marker.AutoMarker;
 import com.group5.smartattendance.marker.MarkingRequest;
-import com.group5.smartattendance.marker.AttendanceManager;
 import com.group5.smartattendance.marker.AttendanceMarker;
 import com.group5.smartattendance.marker.AttendanceRecord;
-import com.group5.smartattendance.marker.AttendanceRecord.Status;
 import com.group5.smartattendance.session.Roster;
 import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.session.SessionManager;

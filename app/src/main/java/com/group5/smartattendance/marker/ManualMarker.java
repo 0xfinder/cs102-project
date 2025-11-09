@@ -4,9 +4,7 @@ import com.group5.smartattendance.session.Session;
 import com.group5.smartattendance.student.Student;
 
 import java.sql.SQLException;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.Objects;
 import java.util.Optional;
 

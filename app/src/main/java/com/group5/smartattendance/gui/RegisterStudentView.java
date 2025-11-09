@@ -14,7 +14,6 @@ import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
-import com.group5.smartattendance.gui.AlertBoxView;
 import com.group5.smartattendance.persistence.StudentManager;
 import com.group5.smartattendance.student.Student;
 
