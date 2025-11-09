@@ -259,7 +259,8 @@ public class SessionManager {
                 if (attendanceRecord.isPresent()
                         && attendanceRecord.get().getStatus() == AttendanceRecord.Status.PENDING) {
                     AttendanceRecord existing = attendanceRecord.get();
-                    AttendanceRecord updated = existing.setManual(AttendanceRecord.Status.ABSENT, Instant.now(), null);
+                    AttendanceRecord updated = existing.setManual(AttendanceRecord.Status.ABSENT, null, null)
+                            .setMethod(Optional.empty());
                     AttendanceManager.update(updated);
                 }
             }
@@ -288,9 +289,11 @@ public class SessionManager {
                 if (attendanceRecord.isPresent()
                         && attendanceRecord.get().getStatus() == AttendanceRecord.Status.ABSENT
                         && attendanceRecord.get().getMarkedAt().isEmpty()) {
-                    // Only revert auto-marked absences (no marked_at timestamp means no manual override)
+                    // Only revert auto-marked absences (no marked_at timestamp means no manual
+                    // override)
                     AttendanceRecord existing = attendanceRecord.get();
-                    AttendanceRecord updated = existing.setManual(AttendanceRecord.Status.PENDING, Instant.now(), null);
+                    AttendanceRecord updated = existing.setManual(AttendanceRecord.Status.PENDING, null, null)
+                            .setMethod(Optional.empty());
                     AttendanceManager.update(updated);
                 }
             }

@@ -12,8 +12,6 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.*;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.time.Instant;
 
 import com.group5.smartattendance.persistence.StudentManager;
@@ -145,11 +143,6 @@ public class SessionView extends JFrame {
         }
 
         Session session = sessions.get(selected);
-
-        if (session.getStatus() == Session.Status.CLOSED) {
-            JOptionPane.showMessageDialog(this, "Cannot edit a closed session.");
-            return;
-        }
 
         try {
             Roster roster = sessionManager.loadRoster(session.getId());
@@ -451,8 +444,10 @@ public class SessionView extends JFrame {
         private final List<String> lateAlerts = new ArrayList<>();
 
         public SessionDetailDialog(JFrame parent, Session session, List<Object[]> rosterData, Runnable onUpdate) {
-            super(parent, "Session Detail - " + session.getCourseName(), true);
+            super(parent, "Session Detail - " + session.getCourseName()
+                    + (session.getStatus() == Session.Status.CLOSED ? " (READ-ONLY)" : ""), true);
             this.session = session;
+            boolean isClosed = session.getStatus() == Session.Status.CLOSED;
             setLayout(null);
 
             final int window_w = 1000;
@@ -481,6 +476,15 @@ public class SessionView extends JFrame {
 
             JLabel lblLocation = new JLabel("Location:");
             JTextField txtLocation = new JTextField(session.getLocation().orElse(""), 15);
+
+            // If closed, disable all fields
+            if (isClosed) {
+                txtCourseName.setEditable(false);
+                txtDate.setEditable(false);
+                txtStart.setEditable(false);
+                txtEnd.setEditable(false);
+                txtLocation.setEditable(false);
+            }
 
             JPanel detailsPanel = new JPanel(new GridLayout(2, 5, 5, 5));
             detailsPanel.add(lblCourseName);
@@ -516,6 +520,8 @@ public class SessionView extends JFrame {
             attendanceModel = new DefaultTableModel(tableRows.toArray(new Object[0][]), columns) {
                 @Override
                 public boolean isCellEditable(int row, int col) {
+                    if (isClosed)
+                        return false; // No edits if closed
                     if (col == 0)
                         return true; // checkbox
                     Boolean included = (Boolean) getValueAt(row, 0);
@@ -555,6 +561,9 @@ public class SessionView extends JFrame {
             // === Buttons ===
             btnSaveChanges = new JButton("Save Changes");
             btnSaveChanges.setBounds(250, 410, 180, 30);
+            if (isClosed) {
+                btnSaveChanges.setEnabled(false);
+            }
             btnSaveChanges.addActionListener(e -> {
                 try {
                     String courseName = txtCourseName.getText().trim();

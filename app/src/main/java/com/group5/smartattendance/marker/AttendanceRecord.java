@@ -266,4 +266,30 @@ public final class AttendanceRecord extends Entity {
                 confidence,
                 notes);
     }
+
+    // set method
+    public AttendanceRecord setMethod(Method method) {
+        return new AttendanceRecord(
+                getId(),
+                session,
+                student,
+                status,
+                Optional.of(method),
+                markedAt,
+                confidence,
+                notes);
+    }
+
+    // set method with Optional (allows null)
+    public AttendanceRecord setMethod(Optional<Method> method) {
+        return new AttendanceRecord(
+                getId(),
+                session,
+                student,
+                status,
+                method,
+                markedAt,
+                confidence,
+                notes);
+    }
 }
