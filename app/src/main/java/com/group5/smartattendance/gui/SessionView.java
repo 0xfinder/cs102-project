@@ -26,18 +26,22 @@ import com.group5.smartattendance.marker.AttendanceRecord;
 import com.group5.smartattendance.marker.ManualMarker;
 import com.group5.smartattendance.marker.MarkingRequest;
 import com.group5.smartattendance.user.AuthManager;
+import com.group5.smartattendance.core.AuditLogger;
 
 public class SessionView extends JFrame {
 
     private JTable sessionTable;
     private DefaultTableModel sessionModel;
-    private JButton btnEdit, btnNewSession, btnDelete, btnBack, btnCloseSession;
+    private JButton btnEdit, btnNewSession, btnDelete, btnBack, btnCloseSession, btnReopenSession;
     private SessionManager sessionManager;
     private List<Session> sessions = new ArrayList<>();
+    private AuditLogger auditLogger;
 
     public SessionView() {
-        // initialize session manager
+        // initialize session manager and audit logger
         sessionManager = new SessionManager();
+        String currentUser = AuthManager.getCurrentUser() != null ? AuthManager.getCurrentUser().getEmail() : "SYSTEM";
+        auditLogger = new AuditLogger(currentUser);
 
         setTitle("All Sessions");
         setLayout(null);
@@ -62,16 +66,13 @@ public class SessionView extends JFrame {
         scrollPane.setBounds(50, 70, 700, 250);
         add(scrollPane);
 
-        // Load sessions from persistence
-        loadSessions();
-
         int btnWidth = 150;
         int btnHeight = 35;
         int btnSpacingX = 30;
         int btnSpacingY = 15;
         int windowWidth = 800;
 
-        int totalTopWidth = 3 * btnWidth + 2 * btnSpacingX;
+        int totalTopWidth = 4 * btnWidth + 3 * btnSpacingX;
         int startXTop = (windowWidth - totalTopWidth) / 2;
         int startYTop = 350;
 
@@ -91,23 +92,32 @@ public class SessionView extends JFrame {
         btnNewSession.addActionListener(e -> createNewSession());
         add(btnNewSession);
 
+        // Close session
+        btnCloseSession = new JButton("Close Session");
+        btnCloseSession.setBounds(startXTop + 2 * (btnWidth + btnSpacingX), startYTop, btnWidth, btnHeight);
+        btnCloseSession.addActionListener(e -> closeSelectedSession());
+        add(btnCloseSession);
+
         // Delete session
         btnDelete = new JButton("Delete Session");
-        btnDelete.setBounds(startXTop + 2 * (btnWidth + btnSpacingX), startYTop, btnWidth, btnHeight);
+        btnDelete.setBounds(startXTop + 3 * (btnWidth + btnSpacingX), startYTop, btnWidth, btnHeight);
         btnDelete.addActionListener(e -> deleteSelectedSession());
         add(btnDelete);
 
-        // Close session (NEW button)
-        btnCloseSession = new JButton("Close Session");
-        btnCloseSession.setBounds(startXBottom, startYBottom, btnWidth, btnHeight);
-        btnCloseSession.addActionListener(e -> closeSelectedSession());
-        add(btnCloseSession);
+        // Reopen session
+        btnReopenSession = new JButton("Reopen Session");
+        btnReopenSession.setBounds(startXBottom, startYBottom, btnWidth, btnHeight);
+        btnReopenSession.addActionListener(e -> reopenSelectedSession());
+        add(btnReopenSession);
 
         // Back
         btnBack = new JButton("Back");
         btnBack.setBounds(startXBottom + btnWidth + btnSpacingX, startYBottom, btnWidth, btnHeight);
         btnBack.addActionListener(e -> dispose());
         add(btnBack);
+
+        // Load sessions from persistence (after buttons are created)
+        loadSessions();
 
         setVisible(true);
     }
@@ -358,29 +368,61 @@ public class SessionView extends JFrame {
     private void closeSelectedSession() {
         int selected = sessionTable.getSelectedRow();
         if (selected == -1) {
-            JOptionPane.showMessageDialog(this, "Select a session to close.");
+            JOptionPane.showMessageDialog(this, "Please select a session to close.");
             return;
         }
+
         Session session = sessions.get(selected);
         if (session.getStatus() == Session.Status.CLOSED) {
-            JOptionPane.showMessageDialog(this, "Session is already closed.");
+            JOptionPane.showMessageDialog(this, "Cannot close an already closed session.",
+                    "Session Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         int confirm = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to close this session?",
+                "Are you sure you want to close this session?\nOnce closed, it will be read-only until reopened.",
                 "Confirm Close", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
                 sessionManager.closeSession(session.getId());
+                auditLogger.logSessionArchived(session.getId(), session.getCourseName());
                 loadSessions();
                 JOptionPane.showMessageDialog(this, "Session closed successfully.");
             } catch (SessionManager.SessionManagerException ex) {
-                JOptionPane.showMessageDialog(this, "Failed to clpse session: " + ex.getMessage(),
+                JOptionPane.showMessageDialog(this, "Failed to close session: " + ex.getMessage(),
                         "Session Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
 
+    private void reopenSelectedSession() {
+        int selected = sessionTable.getSelectedRow();
+        if (selected == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a session to reopen.");
+            return;
+        }
+
+        Session session = sessions.get(selected);
+        if (session.getStatus() == Session.Status.OPEN) {
+            JOptionPane.showMessageDialog(this, "Cannot reopen an already open session.",
+                    "Session Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to reopen this archived session?\nThis will allow editing and new attendance marking.",
+                "Confirm Reopen", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                sessionManager.reopenSession(session.getId());
+                auditLogger.logSessionReopened(session.getId(), session.getCourseName());
+                loadSessions();
+                JOptionPane.showMessageDialog(this, "Session reopened successfully.");
+            } catch (SessionManager.SessionManagerException ex) {
+                JOptionPane.showMessageDialog(this, "Failed to reopen session: " + ex.getMessage(),
+                        "Session Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     private List<Object[]> toRosterRows(Roster roster) {

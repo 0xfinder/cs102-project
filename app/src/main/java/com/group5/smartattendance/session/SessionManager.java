@@ -271,6 +271,37 @@ public class SessionManager {
         return setStatus(sessionId, Session.Status.CLOSED);
     }
 
+    public Session reopenSession(String sessionId) {
+        // reopen a closed session by reverting ABSENT statuses back to PENDING
+        long id = Long.parseLong(sessionId);
+        try (Connection connection = connectionProvider.getConnection()) {
+            Session session = findSession(connection, id)
+                    .orElseThrow(() -> new SessionManagerException("Session " + sessionId + " not found"));
+            if (session.getStatus() != Session.Status.CLOSED) {
+                throw new SessionManagerException("Cannot reopen a session that is not closed");
+            }
+            Roster roster = session.getRoster();
+            for (Student student : roster.getStudents()) {
+                Optional<AttendanceRecord> attendanceRecord = AttendanceManager.findBySessionAndStudentId(
+                        session.getId(),
+                        student.getId());
+                if (attendanceRecord.isPresent()
+                        && attendanceRecord.get().getStatus() == AttendanceRecord.Status.ABSENT
+                        && attendanceRecord.get().getMarkedAt().isEmpty()) {
+                    // Only revert auto-marked absences (no marked_at timestamp means no manual override)
+                    AttendanceRecord existing = attendanceRecord.get();
+                    AttendanceRecord updated = existing.setManual(AttendanceRecord.Status.PENDING, Instant.now(), null);
+                    AttendanceManager.update(updated);
+                }
+            }
+            logger.info("Reopened session {}, reverted auto-marked absences to pending", sessionId);
+        } catch (SQLException ex) {
+            logger.error("Failed to reopen session {}", sessionId, ex);
+            throw new SessionManagerException("Failed to reopen session " + sessionId, ex);
+        }
+        return setStatus(sessionId, Session.Status.OPEN);
+    }
+
     public void deleteSession(String sessionId) {
         long id = Long.parseLong(sessionId);
         try (Connection connection = connectionProvider.getConnection()) {
