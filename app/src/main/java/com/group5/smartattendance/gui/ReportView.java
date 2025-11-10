@@ -87,12 +87,12 @@ public class ReportView extends JFrame {
 
         // Export and Back buttons
         btnExport = new JButton("Export CSV...");
-        btnExport.setBounds((window_w / 2) - 75, 580, 150, 30);
+        btnExport.setBounds((window_w / 2) - 170, 580, 150, 30);
         btnExport.addActionListener(e -> exportCSV());
         add(btnExport);
 
         btnBack = new JButton("Back");
-        btnBack.setBounds((window_w / 2) + 90, 580, 100, 30);
+        btnBack.setBounds((window_w / 2) + 10, 580, 100, 30);
         btnBack.addActionListener(e -> dispose());
         add(btnBack);
 
