@@ -231,7 +231,7 @@ public class SessionView extends JFrame {
                 parsedEndTime = null;
 
                 // validate fields
-                if (courseName == null || courseName.trim().isEmpty()) {
+                if (courseName == null || courseName.trim().isEmpty() || courseName.equals("Enter course name")) {
                     errorMsg.append("Course name is required.\n");
                     valid = false;
                 } else {
@@ -325,7 +325,8 @@ public class SessionView extends JFrame {
             }
 
             location = (location != null) ? location.trim() : "";
-            if (location.isEmpty()) {
+
+            if (location.isEmpty() || location.equals("Enter location (optional)")) {
                 location = "";
             }
             sessionManager.createSession(courseName, parsedSessionDate, parsedStartTime,
