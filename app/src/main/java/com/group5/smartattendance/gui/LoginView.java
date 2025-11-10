@@ -23,6 +23,7 @@ public class LoginView extends JFrame {
     private JButton signupButton;
     private JButton switchToSignupButton;
     private JButton switchToLoginButton;
+    private JButton quitButton;
     private JLabel errorLabel;
     private boolean isLoginMode = true;
 
@@ -132,6 +133,16 @@ public class LoginView extends JFrame {
         gbc.weightx = 1.0;
         add(errorLabel, gbc);
 
+        // Quit button
+        quitButton = new JButton("Quit");
+        gbc.gridx = 1;
+        gbc.gridy = 7;
+        gbc.gridwidth = 1;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.SOUTHEAST;
+        gbc.weightx = 0.0;
+        add(quitButton, gbc);
+
         updateUIMode();
         // enables button press on "Enter" but looks ugly
         getRootPane().setDefaultButton(loginButton);
@@ -168,6 +179,14 @@ public class LoginView extends JFrame {
                 isLoginMode = true;
                 updateUIMode();
                 getRootPane().setDefaultButton(loginButton);
+            }
+        });
+
+        quitButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                logger.info("User quit application");
+                System.exit(0);
             }
         });
     }
