@@ -132,7 +132,8 @@ public class LiveRecognitionView extends JFrame {
         List<Session> sessions = sm.listSessions();
         List<String> sessionNames = new ArrayList<>();
         for (Session session : sessions) {
-            sessionNames.add("C" + session.getId() + " - " + session.getCourseName());
+            if (session.getStatus() == Session.Status.OPEN)
+                sessionNames.add("C" + session.getId() + " - " + session.getCourseName());
         }
 
         // Dropdown
