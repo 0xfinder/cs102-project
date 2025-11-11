@@ -292,4 +292,17 @@ public final class AttendanceRecord extends Entity {
                 confidence,
                 notes);
     }
+
+    // set confidence with Optional (allows null)
+    public AttendanceRecord setConfidence(Optional<Double> confidence) {
+        return new AttendanceRecord(
+                getId(),
+                session,
+                student,
+                status,
+                method,
+                markedAt,
+                confidence.orElse(this.confidence),
+                notes);
+    }
 }

@@ -33,12 +33,20 @@ public class ManualMarker implements AttendanceMarker {
 
         if (existingRecord.isPresent()) {
             AttendanceRecord current = existingRecord.get();
-
-            // update to manual (handles empty method or AUTO override)
-            return AttendanceManager.update(current.setManual(status, markedAt, notes));
+            // if desired status is PENDING, clear markedAt, notes, method, confidence
+            if (status == AttendanceRecord.Status.PENDING) {
+                markedAt = null;
+                notes = null;
+                AttendanceRecord.Method method = null;
+                Optional<Double> confidence = Optional.empty();
+                return AttendanceManager
+                        .update(current.setManual(status, markedAt, notes).setMethod(method)
+                                .setConfidence(confidence));
+            } else {
+                return AttendanceManager.update(current.setManual(status, markedAt, notes));
+            }
+        } else {
+            return AttendanceManager.update(AttendanceRecord.createManual(session, student, status, markedAt, notes));
         }
-
-        // record doesn't exist, create new one
-        return AttendanceManager.update(AttendanceRecord.createManual(session, student, status, markedAt, notes));
     }
 }
