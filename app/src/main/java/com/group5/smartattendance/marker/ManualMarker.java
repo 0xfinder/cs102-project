@@ -36,8 +36,7 @@ public class ManualMarker implements AttendanceMarker {
             // if desired status is PENDING, clear markedAt, notes, method, confidence
             if (status == AttendanceRecord.Status.PENDING) {
                 markedAt = null;
-                notes = null;
-                AttendanceRecord.Method method = null;
+                Optional<AttendanceRecord.Method> method = Optional.empty();
                 Optional<Double> confidence = Optional.empty();
                 return AttendanceManager
                         .update(current.setManual(status, markedAt, notes).setMethod(method)

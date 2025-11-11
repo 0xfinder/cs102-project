@@ -654,6 +654,13 @@ public class SessionView extends JFrame {
                     String statusStr = (String) attendanceModel.getValueAt(i, 3);
                     String notesStr = (String) attendanceModel.getValueAt(i, 6);
 
+                    // Normalize notesStr: handle null and trim whitespace
+                    if (notesStr == null) {
+                        notesStr = "";
+                    } else {
+                        notesStr = notesStr.trim();
+                    }
+
                     AttendanceRecord.Status newStatus;
                     try {
                         newStatus = AttendanceRecord.Status.valueOf(statusStr.toUpperCase());
@@ -669,7 +676,8 @@ public class SessionView extends JFrame {
                         AttendanceRecord.Status oldStatus = current.getStatus();
 
                         boolean statusChanged = !oldStatus.equals(newStatus);
-                        boolean notesChanged = !Objects.equals(current.getNotes().orElse(""), notesStr);
+                        String currentNotes = current.getNotes().orElse("").trim();
+                        boolean notesChanged = !Objects.equals(currentNotes, notesStr);
 
                         if (statusChanged || notesChanged) {
                             // Use ManualMarker to mark attendance with proper status override logic
@@ -681,19 +689,11 @@ public class SessionView extends JFrame {
                             // Strip any marked by entry from notesStr (user input)
                             String strippedNotes = notesStr.replaceAll("\\s*" + markedByPattern, "").trim();
 
-                            // Extract marked by entry from old notes if it exists
-                            java.util.regex.Pattern p = java.util.regex.Pattern.compile(markedByPattern);
-                            java.util.regex.Matcher m = p.matcher(oldNotes);
-                            String existingMarkedBy = m.find() ? m.group() : null;
-
-                            // Update marked by entry if status or notes changed
-                            if (existingMarkedBy != null && existingMarkedBy.contains(currentEmail)) {
-                                // Same user, keep stripped notes as is
-                                finalNotes = strippedNotes;
+                            // Always add marked by entry when anything changes
+                            if (strippedNotes.isEmpty()) {
+                                finalNotes = "(marked by " + currentEmail + ")";
                             } else {
-                                // Different user or no existing entry, add/overwrite
-                                finalNotes = strippedNotes + (strippedNotes.isEmpty() ? "" : " ") + "(marked by "
-                                        + currentEmail + ")";
+                                finalNotes = strippedNotes + " (marked by " + currentEmail + ")";
                             }
 
                             MarkingRequest request = MarkingRequest.builder(session.getId(), studentId)
