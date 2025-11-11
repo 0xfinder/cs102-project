@@ -58,6 +58,10 @@ public class FaceData {
         MatOfFloat ranges = new MatOfFloat(0f, 256f);
         MatOfInt channels = new MatOfInt(0);
         Imgproc.calcHist(List.of(image), channels, new Mat(), hist, histSize, ranges);
+        // Equalize Histogram Data
+        hist.convertTo(hist, 0); // Convert from CV_32FC1 to CV_8UC1
+        Imgproc.equalizeHist(hist, hist);
+        hist.convertTo(hist, 5); // Convert from CV_8UC1 to CV_32FC1
         Core.normalize(hist, hist, 0, 1, Core.NORM_MINMAX);
         return hist;
     }

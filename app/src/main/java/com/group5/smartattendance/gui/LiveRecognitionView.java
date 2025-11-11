@@ -26,6 +26,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 
 import org.opencv.core.*;
+import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
@@ -360,6 +361,7 @@ public class LiveRecognitionView extends JFrame {
         // init detectedName to "No Student Detected" if no faces are detected
         detectedStudent = "No Student Detected";
         String LabelScore = "--.-";
+        long sysTime = System.currentTimeMillis();
         // currFaceDetected = false;
         for (Rect rect : faces.toArray()) {
             // Update currFaceDeteced
@@ -399,7 +401,6 @@ public class LiveRecognitionView extends JFrame {
 
             // Set bounding box color based on best score (correlation: higher is better)
             Scalar bbColor = bbColorGreen; // Bounding Box color defaults to green when within threshold;
-            long sysTime = System.currentTimeMillis();
             long prepareTime = cooldownTime - (prepareTimeSeconds * 1000); // Time before prepared signal starts
             if (sessionStarted && lastCaptureTime + prepareTime <= sysTime
                     && sysTime <= lastCaptureTime + cooldownTime) {
@@ -418,6 +419,8 @@ public class LiveRecognitionView extends JFrame {
                     Imgproc.FONT_HERSHEY_SIMPLEX, bbTextSize, bbColor, bbTextThickness); // Font Family, ???, RGB Color,
                                                                                          // ???
 
+            // Only take the first face guess of array
+            break;
         }
 
         // Update (other) label text
@@ -437,7 +440,11 @@ public class LiveRecognitionView extends JFrame {
         MatOfInt histSize = new MatOfInt(256);
         MatOfFloat ranges = new MatOfFloat(0f, 256f);
         MatOfInt channels = new MatOfInt(0);
+
         Imgproc.calcHist(List.of(image), channels, new Mat(), hist, histSize, ranges);
+        // hist.convertTo(hist, 0); // Convert from CV_32FC1 to CV_8UC1
+        // Imgproc.equalizeHist(hist, hist);
+        // hist.convertTo(hist, 5); // Convert from CV_8UC1 to CV_32FC1
         Core.normalize(hist, hist, 0, 1, Core.NORM_MINMAX);
         return hist;
     }
