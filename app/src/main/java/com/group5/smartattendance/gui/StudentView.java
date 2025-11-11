@@ -18,11 +18,10 @@ public class StudentView extends JFrame {
     private JTable studentTable;
     private DefaultTableModel studentModel;
 
-
     Instant now = Instant.now();
     String formattedDate = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        .withZone(ZoneId.systemDefault())
-        .format(now);
+            .withZone(ZoneId.systemDefault())
+            .format(now);
 
     public StudentView() {
         setTitle("Student List");
@@ -37,7 +36,7 @@ public class StudentView extends JFrame {
         add(lblHeader);
 
         // Table
-        String[] columns = { "Student ID", "Name", "Class Group", "Email", "Phone","Date Registered"};
+        String[] columns = { "Student ID", "Name", "Class Group", "Email", "Phone", "Date Registered" };
         studentModel = new DefaultTableModel(null, columns) {
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -81,14 +80,14 @@ public class StudentView extends JFrame {
                 String formattedDate = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
                         .withZone(ZoneId.systemDefault())
                         .format(s.getEnrollmentDate());
-    
+
                 studentModel.addRow(new Object[] {
-                    s.getId(),
-                    s.getName(),
-                    s.getClassGroup(),
-                    s.getEmail(),
-                    s.getPhone(),
-                    formattedDate // show registration date
+                        "S" + s.getId(),
+                        s.getName(),
+                        s.getClassGroup(),
+                        s.getEmail(),
+                        s.getPhone(),
+                        formattedDate // show registration date
                 });
             }
         } catch (SQLException e) {
@@ -100,13 +99,12 @@ public class StudentView extends JFrame {
         Student student = showStudentDialog(null);
         if (student != null) {
             try {
-                Student inserted = StudentManager.insert(
-                    student.getName(),
-                    student.getClassGroup(),
-                    student.getEmail(),
-                    student.getPhone(),
-                    student.getEnrollmentDate()
-                );
+                StudentManager.insert(
+                        student.getName(),
+                        student.getClassGroup(),
+                        student.getEmail(),
+                        student.getPhone(),
+                        student.getEnrollmentDate());
                 loadStudents();
             } catch (SQLException e) {
                 JOptionPane.showMessageDialog(this, "Insert failed: " + e.getMessage());
@@ -121,7 +119,7 @@ public class StudentView extends JFrame {
             return;
         }
 
-        String id = studentModel.getValueAt(row, 0).toString();
+        String id = studentModel.getValueAt(row, 0).toString().substring(1);
         String name = studentModel.getValueAt(row, 1).toString();
         String classGroup = studentModel.getValueAt(row, 2).toString();
         String email = studentModel.getValueAt(row, 3).toString();
@@ -145,7 +143,7 @@ public class StudentView extends JFrame {
             return;
         }
 
-        String id = studentModel.getValueAt(row, 0).toString();
+        String id = studentModel.getValueAt(row, 0).toString().substring(1);
         int confirm = JOptionPane.showConfirmDialog(this, "Delete this student?", "Confirm", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
@@ -162,7 +160,7 @@ public class StudentView extends JFrame {
         JTextField tfClass = new JTextField(existing != null ? existing.getClassGroup() : "");
         JTextField tfEmail = new JTextField(existing != null ? existing.getEmail() : "");
         JTextField tfPhone = new JTextField(existing != null ? existing.getPhone() : "");
-    
+
         JLabel lblDate = new JLabel();
         if (existing != null) {
             String formattedDate = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -170,34 +168,33 @@ public class StudentView extends JFrame {
                     .format(existing.getEnrollmentDate());
             lblDate.setText("Registered on: " + formattedDate);
         }
-    
+
         JPanel panel = new JPanel(new GridLayout(0, 1));
-        panel.add(new JLabel("Name:")); panel.add(tfName);
-        panel.add(new JLabel("Class Group:")); panel.add(tfClass);
-        panel.add(new JLabel("Email:")); panel.add(tfEmail);
-        panel.add(new JLabel("Phone:")); panel.add(tfPhone);
-        if (existing != null) panel.add(lblDate);
-    
+        panel.add(new JLabel("Name:"));
+        panel.add(tfName);
+        panel.add(new JLabel("Class Group:"));
+        panel.add(tfClass);
+        panel.add(new JLabel("Email:"));
+        panel.add(tfEmail);
+        panel.add(new JLabel("Phone:"));
+        panel.add(tfPhone);
+        if (existing != null)
+            panel.add(lblDate);
+
         int result = JOptionPane.showConfirmDialog(this, panel,
                 existing == null ? "Add Student" : "Edit Student",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-    
+
         if (result == JOptionPane.OK_OPTION) {
             return new Student(
-                existing != null ? existing.getId() : UUID.randomUUID().toString(),
-                tfName.getText(),
-                tfClass.getText(),
-                tfEmail.getText(),
-                tfPhone.getText(),
-                existing != null ? existing.getEnrollmentDate() : Instant.now()
-            );
+                    existing != null ? existing.getId() : UUID.randomUUID().toString(),
+                    tfName.getText(),
+                    tfClass.getText(),
+                    tfEmail.getText(),
+                    tfPhone.getText(),
+                    existing != null ? existing.getEnrollmentDate() : Instant.now());
         }
-    
+
         return null;
     }
 }
-
-
-
-
-

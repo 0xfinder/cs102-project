@@ -53,7 +53,7 @@ public class SessionView extends JFrame {
         add(lblHeader);
 
         // Table setup
-        String[] columns = { "Course", "Date", "Start Time", "End Time", "Location", "Status" };
+        String[] columns = { "ID", "Course", "Date", "Start Time", "End Time", "Location", "Status" };
         sessionModel = new DefaultTableModel(null, columns) {
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -125,6 +125,7 @@ public class SessionView extends JFrame {
         sessionModel.setRowCount(0);
         for (Session session : sessions) {
             sessionModel.addRow(new Object[] {
+                    "C" + session.getId(),
                     session.getCourseName(),
                     session.getSessionDate().toString(),
                     session.getStartTime().toString(),
@@ -187,7 +188,6 @@ public class SessionView extends JFrame {
         JTextField locationField = new JTextField(20);
 
         // add placeholder text to fields to show example format of inputs
-        // TODO: make placeholder text greyed out
         LocalDate todayDate = LocalDate.now();
         addPlaceholder(courseNameField, "Enter course name");
         sessionDateField.setText(todayDate.toString());
@@ -275,7 +275,6 @@ public class SessionView extends JFrame {
                         valid = false;
                     }
                 }
-                // TODO: validate that start time is before end time
                 if (valid && parsedStartTime != null && parsedEndTime != null) {
                     if (!parsedStartTime.isBefore(parsedEndTime)) {
                         errorMsg.append("Start time must be before end time.\n");
@@ -684,7 +683,6 @@ public class SessionView extends JFrame {
                             String finalNotes = notesStr;
                             String currentEmail = AuthManager.getCurrentUser().getEmail();
                             String markedByPattern = "\\(marked by [^)]+\\)";
-                            String oldNotes = current.getNotes().orElse("");
 
                             // Strip any marked by entry from notesStr (user input)
                             String strippedNotes = notesStr.replaceAll("\\s*" + markedByPattern, "").trim();
