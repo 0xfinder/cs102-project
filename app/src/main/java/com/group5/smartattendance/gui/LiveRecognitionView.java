@@ -360,10 +360,10 @@ public class LiveRecognitionView extends JFrame {
         // init detectedName to "No Student Detected" if no faces are detected
         detectedStudent = "No Student Detected";
         String LabelScore = "--.-";
-        currFaceDetected = false;
+        // currFaceDetected = false;
         for (Rect rect : faces.toArray()) {
             // Update currFaceDeteced
-            currFaceDetected = true;
+            // currFaceDetected = true;
 
             // Crop and resize face
             Mat face = gray.submat(rect);
