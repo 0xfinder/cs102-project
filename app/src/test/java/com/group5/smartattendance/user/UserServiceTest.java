@@ -9,16 +9,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class UserServiceTest {
 
-    @BeforeEach
-    void setUp() throws Exception {
-        UserDatabaseManager.deleteDatabase();
-        UserDatabaseManager.initialize();
-    }
+    // @BeforeEach
+    // void setUp() throws Exception {
+    // UserDatabaseManager.deleteDatabase();
+    // UserDatabaseManager.initialize();
+    // }
 
-    @AfterEach
-    void tearDown() throws Exception {
-        UserDatabaseManager.deleteDatabase();
-    }
+    // @AfterEach
+    // void tearDown() throws Exception {
+    // UserDatabaseManager.deleteDatabase();
+    // }
 
     @Test
     void testSignupAndLogin() throws Exception {
