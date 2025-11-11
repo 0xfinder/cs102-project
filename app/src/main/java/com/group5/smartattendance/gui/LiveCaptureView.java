@@ -274,6 +274,7 @@ public class LiveCaptureView extends JFrame {
         Path studentFolder = null;
 
         if (sid.isEmpty()) {
+            warningBox("No SID input, saving to \"unknown\" folder");
             logger.warn("No SID input, saving to \"unknown\" folder");
             studentFolder = Paths.get(saveFolder, "unknown");
         } else {
