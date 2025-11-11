@@ -351,6 +351,7 @@ public class LiveRecognitionView extends JFrame {
 
         Imgproc.cvtColor(webcamFrame, gray, Imgproc.COLOR_BGR2GRAY); // Convert color image to greyscale and assign to
         // variable
+        // Imgproc.equalizeHist(gray, gray);
 
         // Detect faces
         MatOfRect faces = new MatOfRect();
