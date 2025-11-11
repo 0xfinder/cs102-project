@@ -349,9 +349,8 @@ public class LiveRecognitionView extends JFrame {
         JLabel label = new JLabel();
         add(label);
 
-        Imgproc.cvtColor(webcamFrame, gray, Imgproc.COLOR_BGR2GRAY); // Convert color image to greyscale and assign to
-        // variable
-        // Imgproc.equalizeHist(gray, gray);
+        // Convert color image to greyscale and assign to variable
+        Imgproc.cvtColor(webcamFrame, gray, Imgproc.COLOR_BGR2GRAY);
 
         // Detect faces
         MatOfRect faces = new MatOfRect();
@@ -436,6 +435,9 @@ public class LiveRecognitionView extends JFrame {
 
     // Compute histogram for a single image
     private static Mat computeHistogram(Mat image) {
+        // Equalize image
+        Imgproc.equalizeHist(image, image);
+
         // from faceRecognitionDemo.java
         Mat hist = new Mat();
         MatOfInt histSize = new MatOfInt(256);

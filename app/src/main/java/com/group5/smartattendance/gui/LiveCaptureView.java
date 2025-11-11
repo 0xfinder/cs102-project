@@ -245,6 +245,8 @@ public class LiveCaptureView extends JFrame {
             Imgproc.putText(webcamFrame, "Face detected",
                     new Point(rect.x, rect.y - 10),
                     Imgproc.FONT_HERSHEY_SIMPLEX, 0.7, new Scalar(0, 255, 0), 2);
+
+            break;
         }
 
         if (faceArray.length > 0 && clicked) { // If faces detected and button is clicked
