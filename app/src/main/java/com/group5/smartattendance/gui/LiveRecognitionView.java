@@ -77,13 +77,16 @@ public class LiveRecognitionView extends JFrame {
     private static CascadeClassifier faceDetector = CascadeLoader.loadDefaultFaceCascade();
     private double detectedStudentScore = 0.0;
     private String detectedStudentID;
-    private boolean currFaceDetected = false; // if a face is detected in the current frame
+    // private boolean currFaceDetected = false; // if a face is detected in the
+    // current frame
 
     // Bounding Box Variables
     // NOTE: Java Colors are in BGR
+    final Scalar bbColorGreen = new Scalar(0, 255, 0);
     final Scalar bbColorSuccess = new Scalar(69, 167, 40);
     final Scalar bbColorWarning = new Scalar(7, 193, 255);
     final Scalar bbColorDanger = new Scalar(69, 53, 220);
+    final Scalar bbColorWhite = new Scalar(255, 255, 255);
     final double bbTextSize = 0.75; // default from demo: 0.9
     final int bbTextThickness = 2; // default from demo: 2
 
@@ -93,7 +96,7 @@ public class LiveRecognitionView extends JFrame {
     final int webcamIndex = config.getCameraIndex();
 
     private SessionManager sm = new SessionManager();
-    private Session currSession;
+    // private Session currSession;
     private String selectedSessionID;
     private List<FaceData> studentFaceData = new ArrayList<>();
 
@@ -181,7 +184,7 @@ public class LiveRecognitionView extends JFrame {
                 if (selectedSessionID != null) {
                     if (sessionStarted == false) {
                         logger.info("Starting Attendance Marker");
-                        sm.openSession(selectedSessionID);
+                        // sm.openSession(selectedSessionID);
                         sessionStarted = true;
 
                         // Update UI
@@ -395,15 +398,14 @@ public class LiveRecognitionView extends JFrame {
             }
 
             // Set bounding box color based on best score (correlation: higher is better)
-            Scalar bbColor = bbColorWarning; // Bounding Box color defaults to warning color, success is too dark;
-            // Set bbColor to green during prepare stage
+            Scalar bbColor = bbColorGreen; // Bounding Box color defaults to green when within threshold;
             long sysTime = System.currentTimeMillis();
             long prepareTime = cooldownTime - (prepareTimeSeconds * 1000); // Time before prepared signal starts
             if (sessionStarted && lastCaptureTime + prepareTime <= sysTime
                     && sysTime <= lastCaptureTime + cooldownTime) {
-                bbColor = bbColorSuccess;
+                bbColor = bbColorWhite; // BB color to white on prepare cooldown
             } else if (detectedStudentScore < threshold) {
-                bbColor = bbColorDanger;
+                bbColor = bbColorWarning; // BB color to warning when below threshold
             }
 
             // Draw rectangle
