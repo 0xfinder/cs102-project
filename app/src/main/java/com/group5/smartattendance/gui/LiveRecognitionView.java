@@ -436,7 +436,7 @@ public class LiveRecognitionView extends JFrame {
     // Compute histogram for a single image
     private static Mat computeHistogram(Mat image) {
         // Equalize image
-        Imgproc.equalizeHist(image, image);
+        // Imgproc.equalizeHist(image, image);
 
         // from faceRecognitionDemo.java
         Mat hist = new Mat();

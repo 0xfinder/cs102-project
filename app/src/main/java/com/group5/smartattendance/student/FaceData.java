@@ -52,7 +52,7 @@ public class FaceData {
 
     private static Mat computeHistogram(Mat image) {
         // Equalize image
-        Imgproc.equalizeHist(image, image);
+        // Imgproc.equalizeHist(image, image);
 
         // from faceRecognitionDemo.java
         // Compute histogram for a single image
