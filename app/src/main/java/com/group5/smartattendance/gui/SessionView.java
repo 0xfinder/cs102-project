@@ -4,12 +4,14 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.awt.*;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.*;
 import java.time.Instant;
@@ -34,11 +36,13 @@ public class SessionView extends JFrame {
     private SessionManager sessionManager;
     private List<Session> sessions = new ArrayList<>();
     private AuditLogger auditLogger;
+    private static final Logger logger = LoggerFactory.getLogger(SessionView.class);
 
     public SessionView() {
         // initialize session manager and audit logger
         sessionManager = new SessionManager();
         String currentUser = AuthManager.getCurrentUser() != null ? AuthManager.getCurrentUser().getEmail() : "SYSTEM";
+        logger.info("SessionView opened");
         auditLogger = new AuditLogger(currentUser);
 
         setTitle("All Sessions");
@@ -137,6 +141,7 @@ public class SessionView extends JFrame {
     }
 
     private void openSelectedSession() {
+
         int selected = sessionTable.getSelectedRow();
         if (selected == -1) {
             JOptionPane.showMessageDialog(this, "Please select a session to edit.");
@@ -144,7 +149,7 @@ public class SessionView extends JFrame {
         }
 
         Session session = sessions.get(selected);
-
+        logger.info("Selected Session Id: " + session.getId());
         try {
             Roster roster = sessionManager.loadRoster(session.getId());
             List<Object[]> rosterRows = toRosterRows(roster);
@@ -152,6 +157,7 @@ public class SessionView extends JFrame {
         } catch (SessionManager.SessionManagerException ex) {
             JOptionPane.showMessageDialog(this, "Failed to load roster: " + ex.getMessage(),
                     "Session Error", JOptionPane.ERROR_MESSAGE);
+            logger.error("Error: " + ex);
             return;
         }
     }
@@ -332,6 +338,8 @@ public class SessionView extends JFrame {
                     parsedEndTime, location, new Roster());
             loadSessions();
             JOptionPane.showMessageDialog(this, "Session created successfully.");
+            logger.info("Created new session");
+
         }
     }
 
@@ -350,9 +358,11 @@ public class SessionView extends JFrame {
 
         try {
             sessionManager.deleteSession(session.getId());
+            logger.info("Deleted session: " + session.getId());
             loadSessions();
             JOptionPane.showMessageDialog(this, "Session deleted successfully.");
         } catch (SessionManager.SessionManagerException ex) {
+            logger.error("Error", ex);
             JOptionPane.showMessageDialog(this, "Failed to delete session: " + ex.getMessage(),
                     "Session Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -369,6 +379,7 @@ public class SessionView extends JFrame {
         if (session.getStatus() == Session.Status.CLOSED) {
             JOptionPane.showMessageDialog(this, "Cannot close an already closed session.",
                     "Session Error", JOptionPane.ERROR_MESSAGE);
+            logger.info("Tried to close a closed session");
             return;
         }
 
@@ -381,7 +392,9 @@ public class SessionView extends JFrame {
                 auditLogger.logSessionArchived(session.getId(), session.getCourseName());
                 loadSessions();
                 JOptionPane.showMessageDialog(this, "Session closed successfully.");
+                logger.info("Successfully close Session: " + session.getId());
             } catch (SessionManager.SessionManagerException ex) {
+                logger.error("Error: " + ex);
                 JOptionPane.showMessageDialog(this, "Failed to close session: " + ex.getMessage(),
                         "Session Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -399,6 +412,7 @@ public class SessionView extends JFrame {
         if (session.getStatus() == Session.Status.OPEN) {
             JOptionPane.showMessageDialog(this, "Cannot reopen an already open session.",
                     "Session Error", JOptionPane.ERROR_MESSAGE);
+            logger.info("User tried to reopen an open session");
             return;
         }
 
@@ -411,7 +425,9 @@ public class SessionView extends JFrame {
                 auditLogger.logSessionReopened(session.getId(), session.getCourseName());
                 loadSessions();
                 JOptionPane.showMessageDialog(this, "Session reopened successfully.");
+                logger.info("Successfully reopen Session:", session.getId());
             } catch (SessionManager.SessionManagerException ex) {
+                logger.error("Error: " + ex);
                 JOptionPane.showMessageDialog(this, "Failed to reopen session: " + ex.getMessage(),
                         "Session Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -602,8 +618,10 @@ public class SessionView extends JFrame {
                     if (onUpdate != null) {
                         onUpdate.run();
                     }
-
+                    logger.info("Updated details for Session: " + session.getId());
                 } catch (Exception ex) {
+                    logger.error("Error: " + ex);
+
                     JOptionPane.showMessageDialog(this,
                             "Failed to save changes: " + ex.getMessage(),
                             "Error", JOptionPane.ERROR_MESSAGE);
@@ -664,6 +682,7 @@ public class SessionView extends JFrame {
                     try {
                         newStatus = AttendanceRecord.Status.valueOf(statusStr.toUpperCase());
                     } catch (IllegalArgumentException e) {
+                        logger.error("Error: " + e);
                         newStatus = AttendanceRecord.Status.PENDING;
                     }
 
@@ -715,7 +734,9 @@ public class SessionView extends JFrame {
 
                 updateCountersAndAlerts();
                 JOptionPane.showMessageDialog(this, "Changes saved successfully.");
+                logger.info("Saved Manual changes");
             } catch (Exception ex) {
+                logger.error("Error: " + ex);
                 JOptionPane.showMessageDialog(
                         this,
                         "Failed to save attendance: " + ex.getMessage(),

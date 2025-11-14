@@ -2,6 +2,10 @@ package com.group5.smartattendance.gui;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.awt.*;
 import java.io.File;
 import java.io.FileWriter;
@@ -24,6 +28,7 @@ public class ReportView extends JFrame {
     private JButton btnExport;
     private JButton btnBack;
     private SessionManager sessionManager;
+    private static final Logger logger = LoggerFactory.getLogger(ReportView.class);
 
     public ReportView() {
         setTitle("Attendance Reports");
@@ -131,7 +136,7 @@ public class ReportView extends JFrame {
         Session session = (Session) sessionSelector.getSelectedItem();
         if (session == null)
             return;
-
+        logger.info("Selected Session: " + session.getId());
         try {
             List<Student> allStudents = session.getRoster().getStudents();
             List<AttendanceRecord> records = AttendanceManager.findBySession(session);
@@ -185,6 +190,7 @@ public class ReportView extends JFrame {
 
         } catch (Exception ex) {
             ex.printStackTrace();
+            logger.error("Error: " + ex);
             JOptionPane.showMessageDialog(this, "Failed to load report: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -229,8 +235,9 @@ public class ReportView extends JFrame {
             }
 
             JOptionPane.showMessageDialog(this, "CSV export successful!", "Success", JOptionPane.INFORMATION_MESSAGE);
-
+            logger.info("Exported to csv");
         } catch (Exception ex) {
+            logger.error("Error:", ex);
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Export failed: " + ex.getMessage(), "Error",
                     JOptionPane.ERROR_MESSAGE);
